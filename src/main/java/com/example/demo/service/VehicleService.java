@@ -9,23 +9,45 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Fleet business logic. The public catalog is served from a short-lived
+ * in-process cache: the vehicle list changes a few times a year, but it is
+ * read on every homepage visit, so most reads should not touch the database
+ * at all. Any admin write invalidates the cache immediately, so the public
+ * site reflects changes within one request.
+ */
 @Service
 public class VehicleService {
 
     private static final String ACTIVE = "active";
+    private static final Duration PUBLIC_TTL = Duration.ofSeconds(60);
 
     private final VehicleRepository repo;
+
+    /** Immutable snapshot; readers only do a volatile read, no locks. */
+    private record Snapshot(List<VehicleResponse> vehicles, long expiresAtMillis) {}
+
+    private volatile Snapshot activeCache;
 
     public VehicleService(VehicleRepository repo) {
         this.repo = repo;
     }
 
-    @Transactional(readOnly = true)
     public List<VehicleResponse> listPublic() {
-        return repo.findByStatusOrderByNameAsc(ACTIVE).stream().map(VehicleResponse::from).toList();
+        Snapshot snapshot = activeCache;
+        long now = System.currentTimeMillis();
+        if (snapshot != null && now < snapshot.expiresAtMillis()) {
+            return snapshot.vehicles();
+        }
+        List<VehicleResponse> fresh = repo.findByStatusOrderByNameAsc(ACTIVE).stream()
+                .map(VehicleResponse::from)
+                .toList();
+        activeCache = new Snapshot(fresh, now + PUBLIC_TTL.toMillis());
+        return fresh;
     }
 
     @Transactional(readOnly = true)
@@ -47,7 +69,9 @@ public class VehicleService {
         Vehicle v = new Vehicle();
         apply(v, req);
         if (v.getStatus() == null || v.getStatus().isBlank()) v.setStatus(ACTIVE);
-        return VehicleResponse.from(repo.save(v));
+        VehicleResponse saved = VehicleResponse.from(repo.save(v));
+        evict();
+        return saved;
     }
 
     @Transactional
@@ -59,7 +83,9 @@ public class VehicleService {
             // reactivate a vehicle that is in maintenance.
             v.setStatus(v.getStatus() == null ? ACTIVE : v.getStatus());
         }
-        return VehicleResponse.from(repo.save(v));
+        VehicleResponse saved = VehicleResponse.from(repo.save(v));
+        evict();
+        return saved;
     }
 
     @Transactional
@@ -68,6 +94,11 @@ public class VehicleService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Vehicle not found");
         }
         repo.deleteById(id);
+        evict();
+    }
+
+    private void evict() {
+        activeCache = null;
     }
 
     private Vehicle find(UUID id) {

@@ -147,6 +147,33 @@ psql "$DB_URL" -f db/demo_bookings.sql   # demo bookings for the dashboard (idem
 - **Honest scope.** Payments, driver accounts and live GPS are *not* faked in
   the UI; the roadmap below lists them as future work.
 
+## Performance, scale and abuse protection
+
+The three "cheap wins" that keep the public API fast and safe, each one a
+self-contained concept worth learning:
+
+- **Rate limiting** (`RateLimitFilter`) — a fixed-window counter per client IP
+  protects the unauthenticated write routes: 10 login attempts / 5 min,
+  20 bookings / 10 min, 60 lookups / 10 min. Exceeding the budget returns
+  `429 Too Many Requests` with a `Retry-After` header. The concept to learn:
+  token-bucket vs fixed-window vs sliding-window algorithms, and why a
+  multi-instance deployment needs a shared store (Redis) or an edge limiter
+  instead of per-process memory.
+- **TTL cache + write-through invalidation** (`VehicleService`) — the public
+  fleet catalog is served from an immutable in-process snapshot that is at most
+  60 seconds old; every admin create/update/delete evicts it immediately. Plus
+  `Cache-Control: max-age=60` on the response, so browsers and CDNs reuse it
+  too. Concepts: cache stampede, TTL vs explicit invalidation, CDN caching.
+- **Database indexes** (`db/indexes.sql`) — composite `(status, created_at DESC)`
+  for the admin list sort/filter, and **trigram GIN indexes** (`pg_trgm`)
+  that make `LIKE '%text%'` searches sargable, which plain B-tree indexes
+  cannot do. Concepts: B-tree vs GIN indexes, sargability, `EXPLAIN ANALYZE`.
+
+Also relevant: `readOnly` transactions (lets Postgres/Hibernate skip
+write-related work), `open-in-view=false` (connections return to the pool
+before response serialization), and bounded pagination (no unbounded result
+sets).
+
 ## Roadmap
 
 - Razorpay/payment-gateway integration with reconciled `paymentStatus`

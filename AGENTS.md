@@ -19,6 +19,9 @@ There is no linter, formatter, Checkstyle, or CI config; compilation plus tests 
 - Java package is `com.example.demo` even though Maven coordinates are `com.royaltravels:api`. Put new classes under `src/main/java/com/example/demo/`.
 - Entry point: `RoyalTravelsApplication`. Entities: `Booking`, `Vehicle`, `Admin`. API payloads are records under `dto/`; map entities with the static `from(...)` helpers rather than exposing entities.
 - Business logic lives in `service/` (`BookingService`, `VehicleService`, `AuthService`). Controllers stay thin.
+- Abuse protection: `RateLimitFilter` throttles `POST /api/auth/login` (10/5min), `POST /api/bookings` (20/10min) and `POST /api/bookings/lookup` (60/10min) per client IP with `429` + `Retry-After`.
+- `VehicleService.listPublic()` serves a 60-second in-process TTL snapshot; admin writes evict it. Public `GET /api/vehicles` also sets `Cache-Control: max-age=60`.
+- Performance indexes (trigram GIN for search, composite for list sort) live in `db/indexes.sql` and must be applied manually, like all schema changes.
 - API roots:
   - Public: `/api/health`, `/api/auth/login`, `/api/bookings` (POST), `/api/bookings/lookup` (POST), `/api/vehicles`.
   - Admin: `/api/bookings` (GET), `/api/bookings/{id}` (GET/PATCH), `/api/admin/vehicles` (CRUD).

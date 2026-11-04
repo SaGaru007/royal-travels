@@ -4,11 +4,13 @@ import com.example.demo.dto.VehicleRequest;
 import com.example.demo.dto.VehicleResponse;
 import com.example.demo.service.VehicleService;
 import jakarta.validation.Valid;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 
@@ -22,8 +24,12 @@ public class VehicleController {
     }
 
     @GetMapping("/api/vehicles")
-    public List<VehicleResponse> list() {
-        return service.listPublic();
+    public ResponseEntity<List<VehicleResponse>> list() {
+        // Near-static catalog: let browsers/CDNs reuse it for a minute on top of
+        // the server-side cache in VehicleService.
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.maxAge(Duration.ofSeconds(60)))
+                .body(service.listPublic());
     }
 
     @GetMapping("/api/vehicles/{id}")
