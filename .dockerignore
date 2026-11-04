@@ -1,0 +1,7 @@
+target/
+.git/
+.gitignore
+config/application-local.properties
+.env
+.env.local
+*.md
