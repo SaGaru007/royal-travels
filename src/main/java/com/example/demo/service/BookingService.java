@@ -38,7 +38,9 @@ public class BookingService {
         b.setPaymentStatus("pending");
         b.setTripStage("assigned");
 
-        return BookingResponse.from(repo.save(b));
+        // saveAndFlush: the DB assigns createdAt (@CreationTimestamp) on INSERT,
+        // so the row must be written before mapping the response.
+        return BookingResponse.from(repo.saveAndFlush(b));
     }
 
     @Transactional(readOnly = true)
