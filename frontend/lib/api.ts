@@ -97,6 +97,28 @@ export interface Page<T> {
   size: number;
 }
 
+export interface CustomerAuthResponse {
+  token: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
+export interface CustomerProfile {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  createdAt: string;
+}
+
+export interface CustomerSignupPayload {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+}
+
 export class ApiError extends Error {
   status: number;
   errors?: Record<string, string>;
@@ -174,6 +196,28 @@ export function login(email: string, password: string) {
     method: "POST",
     body: JSON.stringify({ email, password }),
   });
+}
+
+export function customerSignup(payload: CustomerSignupPayload) {
+  return request<CustomerAuthResponse>("/api/auth/customer/signup", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function customerLogin(email: string, password: string) {
+  return request<CustomerAuthResponse>("/api/auth/customer/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export function getCustomerProfile(token: string) {
+  return request<CustomerProfile>("/api/customer/me", {}, token);
+}
+
+export function getCustomerBookings(token: string) {
+  return request<Booking[]>("/api/customer/bookings", {}, token);
 }
 
 export function createBooking(payload: BookingCreate) {

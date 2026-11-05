@@ -7,6 +7,7 @@ const navLinks = [
   { label: "Outstation", href: "/#booking" },
   { label: "Local", href: "/#booking" },
   { label: "Track Booking", href: "/track" },
+  { label: "My Account", href: "/account" },
   { label: "Contact", href: "/#contact" },
 ];
 

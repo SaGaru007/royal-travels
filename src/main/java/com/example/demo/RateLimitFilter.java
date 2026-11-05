@@ -36,6 +36,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private static final Map<String, Limit> LIMITS = Map.of(
             "POST /api/auth/login", new Limit(10, Duration.ofMinutes(5)),
+            "POST /api/auth/customer/login", new Limit(10, Duration.ofMinutes(5)),
+            "POST /api/auth/customer/signup", new Limit(5, Duration.ofHours(1)),
             "POST /api/bookings", new Limit(20, Duration.ofMinutes(10)),
             "POST /api/bookings/lookup", new Limit(60, Duration.ofMinutes(10)));
 

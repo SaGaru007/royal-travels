@@ -24,4 +24,12 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
                    or lower(coalesce(b.email, '')) like lower(concat('%', :q, '%')))
             """)
     Page<Booking> search(@Param("status") String status, @Param("q") String q, Pageable pageable);
+
+    /** Customer booking history: matches the last 10 digits of the phone number. */
+    @Query("""
+            select b from Booking b
+            where b.phone like concat('%', :digits, '%')
+            order by b.createdAt desc
+            """)
+    List<Booking> findByPhoneDigits(@Param("digits") String digits);
 }

@@ -197,5 +197,37 @@ if (!EMAIL || !PASSWORD) {
   check("OpenAPI contract is served", docs.status === 200 && docs.json?.openapi?.startsWith("3."));
 }
 
+// --------------------------------------------------------- customer accounts
+const customerEmail = "e2e.customer@example.com";
+const customerPassword = "E2eCustomer123";
+
+let signup = await call("/api/auth/customer/signup", {
+  method: "POST",
+  body: { name: "E2E Customer", email: customerEmail, phone, password: customerPassword },
+});
+if (signup.status === 409) {
+  signup = await call("/api/auth/customer/login", {
+    method: "POST",
+    body: { email: customerEmail, password: customerPassword },
+  });
+  check("existing customer logs in", signup.status === 200 && Boolean(signup.json?.token), `status=${signup.status}`);
+} else {
+  check("customer signup returns a token", signup.status === 201 && Boolean(signup.json?.token), `status=${signup.status}`);
+}
+
+const customerToken = signup.json?.token;
+check("customer token carries the customer role", signup.json?.role === "customer");
+
+const customerBookings = await call("/api/customer/bookings", { token: customerToken });
+check("customer sees bookings made with their phone",
+  customerBookings.status === 200 && (customerBookings.json ?? []).some((b) => b.id === bookingId),
+  `count=${customerBookings.json?.length}`);
+
+const customerOnAdmin = await call("/api/bookings", { token: customerToken });
+check("customer token cannot reach admin endpoints", customerOnAdmin.status === 403, `status=${customerOnAdmin.status}`);
+
+const customerNoAuth = await call("/api/customer/bookings");
+check("customer bookings require auth", customerNoAuth.status === 401);
+
 console.log(`\n${passed} passed, ${failed} failed  (${BASE})`);
 process.exit(failed === 0 ? 0 : 1);
