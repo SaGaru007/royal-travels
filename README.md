@@ -53,6 +53,9 @@ flowchart LR
 **Public site**
 - Service-type aware booking form (outstation, local, airport, callback) with
   server-side validation and a generated booking reference
+- Optional customer accounts (email + password): signup, login and a
+  "My bookings" page. Guest checkout remains available, and bookings made as a
+  guest before signing up are linked automatically by phone number
 - Booking confirmation + tracking by **booking UUID + phone number** — a
   customer can only see their own booking, never someone else's
 - Live fleet catalog fetched from the API, with category/capacity filters
@@ -75,6 +78,10 @@ Base URL `/api`. Full contract: `/v3/api-docs` (OpenAPI 3.1) or the Swagger UI.
 |---|---|---|---|
 | GET | `/health` | — | Liveness + database connectivity |
 | POST | `/auth/login` | — | Returns a signed JWT for admin access |
+| POST | `/auth/customer/signup` | — | Create a customer account (`201`, returns a customer JWT) |
+| POST | `/auth/customer/login` | — | Customer login |
+| GET | `/customer/me` | CUSTOMER | Current customer profile |
+| GET | `/customer/bookings` | CUSTOMER | Bookings made with the account's phone number |
 | POST | `/bookings` | — | Create a booking (`201`, returns id + `createdAt`) |
 | POST | `/bookings/lookup` | — | Confirm/track a booking (needs UUID **and** phone) |
 | GET | `/vehicles` | — | Active fleet |
