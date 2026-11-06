@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/SaGaru007/RoyalTravels/security/advisories/new
+    about: Report security issues privately. Do not open a public issue.
+  - name: Documentation
+    url: https://github.com/SaGaru007/RoyalTravels/tree/main/docs
+    about: Architecture, API, database, deployment, operations, and security docs.
+  - name: Deployment help
+    url: https://github.com/SaGaru007/RoyalTravels/blob/main/docs/deployment.md
+    about: Follow the deployment runbook before opening an issue.

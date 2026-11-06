@@ -20,6 +20,10 @@ services:
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: prod
+      # 512 MB free instance: let the JVM use a sensible share of the container
+      # instead of the default 25%, which can be too small for Spring Boot.
+      - key: JAVA_TOOL_OPTIONS
+        value: -XX:MaxRAMPercentage=70
       - key: DB_URL
         sync: false
       - key: DB_USERNAME
