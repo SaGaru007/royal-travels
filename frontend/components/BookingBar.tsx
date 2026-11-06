@@ -149,7 +149,7 @@ export default function BookingBar() {
                   <input name="pickupDate" required type="date" min={today()} className="field-input" />
                 </Field>
                 <Field label="Pickup time">
-                  <input name="pickupTime" required type="time" className="field-input" />
+                  <TimeSelect name="pickupTime" />
                 </Field>
                 {tripType === "round" && (
                   <Field label="Return date">
@@ -180,7 +180,7 @@ export default function BookingBar() {
                   <input name="pickupDate" required type="date" min={today()} className="field-input" />
                 </Field>
                 <Field label="Pickup time">
-                  <input name="pickupTime" required type="time" className="field-input" />
+                  <TimeSelect name="pickupTime" />
                 </Field>
                 <Field label="Preferred vehicle">
                   <input name="vehiclePreference" className="field-input" placeholder="e.g. Innova, sedan" />
@@ -209,7 +209,7 @@ export default function BookingBar() {
                   <input name="pickupDate" required type="date" min={today()} className="field-input" />
                 </Field>
                 <Field label="Pickup time">
-                  <input name="pickupTime" required type="time" className="field-input" />
+                  <TimeSelect name="pickupTime" />
                 </Field>
                 <Field label="Flight number">
                   <input name="flightNumber" className="field-input" placeholder="e.g. AI 504" />
@@ -285,6 +285,34 @@ export default function BookingBar() {
 
 function today() {
   return new Date().toISOString().slice(0, 10);
+}
+
+// Half-hour slots rendered in 12-hour form; the form value stays 24-hour
+// ("14:30") because that is what the API expects.
+const TIME_OPTIONS = Array.from({ length: 48 }, (_, index) => {
+  const hours24 = Math.floor(index / 2);
+  const minutes = index % 2 === 0 ? "00" : "30";
+  const hours12 = hours24 % 12 === 0 ? 12 : hours24 % 12;
+  const meridiem = hours24 < 12 ? "AM" : "PM";
+  return {
+    value: `${String(hours24).padStart(2, "0")}:${minutes}`,
+    label: `${String(hours12).padStart(2, "0")}:${minutes} ${meridiem}`,
+  };
+});
+
+function TimeSelect({ name }: { name: string }) {
+  return (
+    <select name={name} required defaultValue="" className="field-input">
+      <option value="" disabled>
+        Select time
+      </option>
+      {TIME_OPTIONS.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  );
 }
 
 function Field({

@@ -13,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -21,6 +23,7 @@ public class BookingService {
 
     private static final Set<String> SERVICE_TYPES = Set.of("outstation", "local", "airport", "callback");
     private static final Set<String> PICKUP_REQUIRED = Set.of("outstation", "local", "airport");
+    private static final java.time.Duration DUPLICATE_WINDOW = java.time.Duration.ofMinutes(10);
 
     private final BookingRepository repo;
 
@@ -31,6 +34,7 @@ public class BookingService {
     @Transactional
     public BookingResponse create(BookingRequest req) {
         validateBusinessRules(req);
+        rejectDuplicate(req);
 
         Booking b = new Booking();
         apply(b, req);
@@ -83,8 +87,34 @@ public class BookingService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found"));
     }
 
-    private void validateBusinessRules(BookingRequest req) {
-        String service = req.serviceType();
+    /**
+     * Blocks accidental duplicate submissions: the same guest, phone and trip
+     * within a short window returns the original booking reference instead of
+     * creating a second row. Double-clicks, browser retries and flaky mobile
+     * networks are the usual culprits.
+     */
+    private void rejectDuplicate(BookingRequest req) {
+        String phone = digits(req.phone());
+        OffsetDateTime since = OffsetDateTime.now().minus(DUPLICATE_WINDOW);
+
+        for (Booking existing : repo.findByCreatedAtAfter(since)) {
+            boolean sameGuest = digits(existing.getPhone()).equals(phone)
+                    && existing.getName() != null
+                    && existing.getName().equalsIgnoreCase(req.name().trim());
+            boolean sameTrip = Objects.equals(existing.getServiceType(), req.serviceType())
+                    && Objects.equals(existing.getPickupDate(), req.pickupDate())
+                    && Objects.equals(existing.getPickupTime(), req.pickupTime());
+
+            if (sameGuest && sameTrip) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "This booking was already received (reference "
+                                + existing.getId().toString().substring(0, 8).toUpperCase()
+                                + "). Check your confirmation page, or call us if you need changes.");
+            }
+        }
+    }
+
+    private void validateBusinessRules(BookingRequest req) {        String service = req.serviceType();
         if (!SERVICE_TYPES.contains(service)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown service type");
         }

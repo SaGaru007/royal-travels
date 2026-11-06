@@ -58,6 +58,9 @@ flowchart LR
   guest before signing up are linked automatically by phone number
 - Booking confirmation + tracking by **booking UUID + phone number** — a
   customer can only see their own booking, never someone else's
+- Duplicate protection: an identical booking from the same guest within
+  10 minutes is rejected with the original reference instead of creating a
+  second row
 - Live fleet catalog fetched from the API, with category/capacity filters
 - Honest UI: no fake payment screens or mock GPS — unimplemented features are
   labelled as coming soon
@@ -66,6 +69,9 @@ flowchart LR
 - Login with `owner` / `staff` roles
 - Booking pipeline: paginated list, search, status / payment / trip-stage
   updates, CSV export, computed pipeline stats
+- **WhatsApp trip assignment**: one click builds a fully formatted trip message
+  (guest, phone, route, time, flight, notes) and opens WhatsApp click-to-chat —
+  no Business API or per-message cost
 - Fleet CRUD: create, edit, retire vehicles, change availability status
 - Analytics derived from real booking and vehicle data (volume, status mix,
   top routes, fleet utilisation)

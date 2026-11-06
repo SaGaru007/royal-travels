@@ -272,6 +272,7 @@ export default function BookingsPage() {
                   <th className="p-4 font-medium">Payment</th>
                   <th className="p-4 font-medium">Status</th>
                   <th className="p-4 font-medium">Trip stage</th>
+                  <th className="p-4 font-medium">Driver</th>
                 </tr>
               </thead>
               <tbody>
@@ -378,6 +379,17 @@ export default function BookingsPage() {
                         <option value="completed">Completed</option>
                       </select>
                     </td>
+                    <td className="p-4">
+                      <button
+                        type="button"
+                        onClick={() => assignOnWhatsApp(booking)}
+                        className="text-xs border border-line rounded-md px-2.5 py-1.5 hover:bg-cream whitespace-nowrap"
+                        title="Opens WhatsApp with the full trip details pre-filled"
+                      >
+                        WhatsApp →
+                      </button>
+                      <div className="text-[10px] text-muted mt-1">Send trip</div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -389,8 +401,53 @@ export default function BookingsPage() {
   );
 }
 
-function Stat({ label, value, sub }: { label: string; value: string; sub: string }) {
-  return (
+/**
+ * Hands a confirmed trip to a driver over WhatsApp using the free click-to-chat
+ * link (no Business API, no per-message cost). The admin types the driver's
+ * number once; the message carries every detail the driver needs.
+ */
+function assignOnWhatsApp(booking: Booking) {
+  const entered = window.prompt(
+    `Driver WhatsApp number for ${shortReference(booking.id)} (10 digits, or with country code)`,
+    "91"
+  );
+  if (entered === null) return;
+
+  const digits = entered.replace(/\D/g, "");
+  if (digits.length < 10) {
+    window.alert("Enter at least 10 digits for the driver's number.");
+    return;
+  }
+  const to = digits.length === 10 ? `91${digits}` : digits;
+
+  const lines = [
+    "*ROYAL TRAVELS — TRIP ASSIGNMENT*",
+    "",
+    `Booking ref: ${shortReference(booking.id)}`,
+    `Service: ${booking.serviceType.toUpperCase()}`,
+    "",
+    `Guest: ${booking.name}`,
+    `Guest phone: ${booking.phone}`,
+    `Pickup: ${booking.pickupLocation || "—"}`,
+    `Drop: ${booking.dropLocation || "—"}`,
+    `Date: ${formatDate(booking.pickupDate)}`,
+    `Time: ${formatTime(booking.pickupTime)}`,
+    booking.flightNumber ? `Flight: ${booking.flightNumber}` : "",
+    booking.passengers ? `Passengers: ${booking.passengers}` : "",
+    booking.vehiclePreference ? `Vehicle requested: ${booking.vehiclePreference}` : "",
+    booking.notes ? `Notes: ${booking.notes}` : "",
+    "",
+    "Reply CONFIRM to accept this trip.",
+  ].filter((line) => line !== "");
+
+  window.open(
+    `https://wa.me/${to}?text=${encodeURIComponent(lines.join("\n"))}`,
+    "_blank",
+    "noopener,noreferrer"
+  );
+}
+
+function Stat({ label, value, sub }: { label: string; value: string; sub: string }) {  return (
     <div className="bg-white border border-line rounded-xl p-5">
       <p className="text-[11px] uppercase tracking-wide text-muted mb-2">{label}</p>
       <p className="text-2xl font-bold text-ink">{value}</p>
