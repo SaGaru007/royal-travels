@@ -7,7 +7,7 @@ COPY src ./src
 RUN mvn -q -DskipTests package
 
 # Runtime stage
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:25-jre
 WORKDIR /app
 COPY --from=build /app/target/api-0.0.1-SNAPSHOT.jar app.jar
 ENV SPRING_PROFILES_ACTIVE=prod
