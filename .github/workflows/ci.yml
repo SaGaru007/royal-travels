@@ -10,7 +10,7 @@ jobs:
     name: Backend — build (Java 21)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-java@v4
         with:
@@ -40,7 +40,7 @@ jobs:
     env:
       NEXT_PUBLIC_API_BASE_URL: http://localhost:8081
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v4
         with:
