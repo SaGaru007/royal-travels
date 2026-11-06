@@ -2,6 +2,7 @@ package com.example.demo.service;
 
 import com.example.demo.Booking;
 import com.example.demo.BookingRepository;
+import com.example.demo.DriverRepository;
 import com.example.demo.dto.BookingRequest;
 import com.example.demo.dto.BookingResponse;
 import com.example.demo.dto.BookingUpdateRequest;
@@ -26,9 +27,11 @@ public class BookingService {
     private static final java.time.Duration DUPLICATE_WINDOW = java.time.Duration.ofMinutes(10);
 
     private final BookingRepository repo;
+    private final DriverRepository drivers;
 
-    public BookingService(BookingRepository repo) {
+    public BookingService(BookingRepository repo, DriverRepository drivers) {
         this.repo = repo;
+        this.drivers = drivers;
     }
 
     @Transactional
@@ -79,6 +82,17 @@ public class BookingService {
         if (req.status() != null) b.setStatus(req.status());
         if (req.paymentStatus() != null) b.setPaymentStatus(req.paymentStatus());
         if (req.tripStage() != null) b.setTripStage(req.tripStage());
+        if (req.driverId() != null) {
+            if (req.driverId().isBlank()) {
+                b.setDriverId(null);
+            } else {
+                UUID driverId = UUID.fromString(req.driverId());
+                if (!drivers.existsById(driverId)) {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Driver not found");
+                }
+                b.setDriverId(driverId);
+            }
+        }
         return BookingResponse.from(repo.save(b));
     }
 
@@ -114,7 +128,8 @@ public class BookingService {
         }
     }
 
-    private void validateBusinessRules(BookingRequest req) {        String service = req.serviceType();
+    private void validateBusinessRules(BookingRequest req) {
+        String service = req.serviceType();
         if (!SERVICE_TYPES.contains(service)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown service type");
         }

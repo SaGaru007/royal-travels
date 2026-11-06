@@ -46,6 +46,9 @@ public class Booking {
     private BigDecimal totalFare;
     private BigDecimal advanceAmount;
 
+    @Column(name = "driver_id")
+    private UUID driverId;
+
     private String paymentStatus = "pending";
     private String status = "new";
     private String tripStage = "assigned";
@@ -115,6 +118,9 @@ public class Booking {
 
     public BigDecimal getAdvanceAmount() { return advanceAmount; }
     public void setAdvanceAmount(BigDecimal advanceAmount) { this.advanceAmount = advanceAmount; }
+
+    public UUID getDriverId() { return driverId; }
+    public void setDriverId(UUID driverId) { this.driverId = driverId; }
 
     public String getPaymentStatus() { return paymentStatus; }
     public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }

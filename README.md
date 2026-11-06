@@ -66,12 +66,18 @@ flowchart LR
   labelled as coming soon
 
 **Admin dashboard** (`/admin`, JWT protected)
-- Login with `owner` / `staff` roles
+- Login with `owner` / `staff` roles, plus self-service password change with
+  current-password confirmation
 - Booking pipeline: paginated list, search, status / payment / trip-stage
   updates, CSV export, computed pipeline stats
-- **WhatsApp trip assignment**: one click builds a fully formatted trip message
-  (guest, phone, route, time, flight, notes) and opens WhatsApp click-to-chat —
-  no Business API or per-message cost
+- **Driver roster**: add chauffeurs with WhatsApp number, vehicle, licence
+  status and availability; assigning a driver is a dropdown on each booking
+- **WhatsApp trip assignment**: one click sends the fully formatted trip
+  (guest, phone, route, time, flight, notes, trip-sheet link) to the assigned
+  driver via free WhatsApp click-to-chat — no Business API or per-message cost
+- **Driver trip sheet** (`/driver/trip`): the assigned driver opens the booking
+  with the reference + their phone, sees the guest and route, and marks the trip
+  started/completed. Customer tracking reflects it on its next refresh
 - Fleet CRUD: create, edit, retire vehicles, change availability status
 - Analytics derived from real booking and vehicle data (volume, status mix,
   top routes, fleet utilisation)
@@ -94,9 +100,14 @@ Base URL `/api`. Full contract: `/v3/api-docs` (OpenAPI 3.1) or the Swagger UI.
 | GET | `/vehicles/{id}` | — | Single active vehicle |
 | GET | `/bookings` | OWNER/STAFF | Paginated bookings, `?status=` and `?q=` filters |
 | GET | `/bookings/{id}` | OWNER/STAFF | Single booking |
-| PATCH | `/bookings/{id}` | OWNER/STAFF | Partial update: `status`, `paymentStatus`, `tripStage` |
+| PATCH | `/bookings/{id}` | OWNER/STAFF | Partial update: `status`, `paymentStatus`, `tripStage`, `driverId` |
 | GET/POST | `/admin/vehicles` | OWNER/STAFF | List all / create vehicle |
 | PUT/DELETE | `/admin/vehicles/{id}` | OWNER/STAFF | Update / delete vehicle |
+| GET/POST | `/admin/drivers` | OWNER/STAFF | List the roster / add a driver |
+| PUT/DELETE | `/admin/drivers/{id}` | OWNER/STAFF | Update / remove an unassigned driver |
+| POST | `/admin/password` | OWNER/STAFF | Change the signed-in admin password |
+| POST | `/driver/trips/lookup` | — | Driver trip sheet (booking UUID **and** driver phone) |
+| PATCH | `/driver/trips/{id}/stage` | — | Driver marks the trip started/completed (phone-verified) |
 
 Errors use RFC 7807 `application/problem+json` via a global exception handler.
 
@@ -157,8 +168,14 @@ psql "$DB_URL" -f db/demo_bookings.sql   # demo bookings for the dashboard (idem
 - **Free-tier-aware health probe.** `/api/health` opens a real database
   connection, so an uptime ping keeps both the API container and the managed
   Postgres project warm.
-- **Honest scope.** Payments, driver accounts and live GPS are *not* faked in
-  the UI; the roadmap below lists them as future work.
+- **Honest scope.** Payments and live GPS are *not* faked in the UI; the
+  roadmap below lists them as future work. Driver accounts are intentionally
+  passwordless: the trip reference plus the phone on the roster is the access
+  check.
+- **Free WhatsApp by default.** Click-to-chat (`wa.me`) needs no Meta business
+  verification, number, template approval or payment. Fully automatic driver
+  notifications would require the WhatsApp Business Cloud API and its
+  per-message pricing; the UI says so rather than implying otherwise.
 
 ## Performance, scale and abuse protection
 
@@ -167,7 +184,8 @@ self-contained concept worth learning:
 
 - **Rate limiting** (`RateLimitFilter`) — a fixed-window counter per client IP
   protects the unauthenticated write routes: 10 login attempts / 5 min,
-  20 bookings / 10 min, 60 lookups / 10 min. Exceeding the budget returns
+  20 bookings / 10 min, 60 booking lookups / 10 min, 60 driver trip lookups /
+  10 min. Exceeding the budget returns
   `429 Too Many Requests` with a `Retry-After` header. The concept to learn:
   token-bucket vs fixed-window vs sliding-window algorithms, and why a
   multi-instance deployment needs a shared store (Redis) or an edge limiter
@@ -190,7 +208,7 @@ sets).
 ## Roadmap
 
 - Razorpay/payment-gateway integration with reconciled `paymentStatus`
-- Driver mobile flow with live GPS (`drivers` table and location columns exist)
+- Live GPS on the driver trip sheet (`current_lat`/`current_lng` already exist)
 - Email/SMS notifications on booking status change
 - Flyway migrations to replace manual SQL
 - Testcontainers-based integration tests against an ephemeral database

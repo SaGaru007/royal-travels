@@ -3,6 +3,7 @@ export type BookingStatus = "new" | "contacted" | "confirmed" | "completed" | "c
 export type PaymentStatus = "pending" | "paid";
 export type TripStage = "assigned" | "started" | "completed";
 export type VehicleStatus = "active" | "maintenance" | "inactive";
+export type DriverStatus = "available" | "on_trip" | "off_duty";
 
 export interface Booking {
   id: string;
@@ -30,6 +31,7 @@ export interface Booking {
   paymentStatus: PaymentStatus;
   status: BookingStatus;
   tripStage: TripStage;
+  driverId?: string | null;
 }
 
 export interface BookingCreate {
@@ -56,6 +58,8 @@ export interface BookingUpdate {
   status?: BookingStatus;
   paymentStatus?: PaymentStatus;
   tripStage?: TripStage;
+  /** Empty string unassigns the current driver. */
+  driverId?: string;
 }
 
 export interface Vehicle {
@@ -81,6 +85,33 @@ export interface VehiclePayload {
   tariffLocal?: number;
   imageUrl?: string;
   status?: VehicleStatus;
+}
+
+export interface Driver {
+  id: string;
+  createdAt: string;
+  name: string;
+  phone: string;
+  rating: number;
+  tripsCompleted: number;
+  licenseVerified: boolean;
+  status: DriverStatus;
+  vehicleId?: string | null;
+}
+
+export interface DriverPayload {
+  name: string;
+  phone: string;
+  rating?: number;
+  tripsCompleted?: number;
+  licenseVerified?: boolean;
+  status?: DriverStatus;
+  vehicleId?: string | null;
+}
+
+export interface DriverTripResponse {
+  booking: Booking;
+  driverName: string;
 }
 
 export interface LoginResponse {
@@ -277,4 +308,55 @@ export function updateVehicle(token: string, id: string, payload: VehiclePayload
 
 export function deleteVehicle(token: string, id: string) {
   return request<void>(`/api/admin/vehicles/${id}`, { method: "DELETE" }, token);
+}
+
+export function getDrivers(token: string) {
+  return request<Driver[]>("/api/admin/drivers", {}, token);
+}
+
+export function createDriver(token: string, payload: DriverPayload) {
+  return request<Driver>("/api/admin/drivers", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  }, token);
+}
+
+export function updateDriver(token: string, id: string, payload: DriverPayload) {
+  return request<Driver>(`/api/admin/drivers/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  }, token);
+}
+
+export function deleteDriver(token: string, id: string) {
+  return request<void>(`/api/admin/drivers/${id}`, { method: "DELETE" }, token);
+}
+
+/** Driver trip sheet: booking reference + the assigned driver's phone. */
+export function getDriverTrip(id: string, phone: string) {
+  return request<DriverTripResponse>("/api/driver/trips/lookup", {
+    method: "POST",
+    body: JSON.stringify({ id, phone }),
+  });
+}
+
+export function updateDriverStage(
+  id: string,
+  payload: { phone: string; stage: "started" | "completed" }
+) {
+  return request<DriverTripResponse>(`/api/driver/trips/${id}/stage`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function changePassword(
+  token: string,
+  currentPassword: string,
+  newPassword: string
+) {
+  return request<void>("/api/admin/password", {
+    method: "POST",
+    body: JSON.stringify({ currentPassword, newPassword }),
+  }, token);
 }

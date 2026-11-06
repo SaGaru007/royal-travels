@@ -5,6 +5,7 @@ import com.example.demo.AdminRepository;
 import com.example.demo.JwtService;
 import com.example.demo.dto.LoginRequest;
 import com.example.demo.dto.LoginResponse;
+import com.example.demo.dto.PasswordChangeRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -38,5 +39,21 @@ public class AuthService {
         String role = admin.getRole() == null ? "staff" : admin.getRole();
         String name = admin.getName() == null ? email : admin.getName();
         return new LoginResponse(jwt.generate(admin.getEmail(), role), name, role);
+    }
+
+    /**
+     * Password rotation from the admin console. The current password is
+     * required, so a stolen session token cannot silently lock the owner out.
+     */
+    @Transactional
+    public void changePassword(String email, PasswordChangeRequest req) {
+        Admin admin = repo.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Account no longer exists"));
+
+        if (!encoder.matches(req.currentPassword(), admin.getPasswordHash())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Current password is incorrect");
+        }
+        admin.setPasswordHash(encoder.encode(req.newPassword()));
+        repo.save(admin);
     }
 }

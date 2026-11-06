@@ -2,6 +2,7 @@ package com.example.demo.service;
 
 import com.example.demo.Vehicle;
 import com.example.demo.VehicleRepository;
+import com.example.demo.DriverRepository;
 import com.example.demo.dto.VehicleRequest;
 import com.example.demo.dto.VehicleResponse;
 import org.springframework.http.HttpStatus;
@@ -27,14 +28,16 @@ public class VehicleService {
     private static final Duration PUBLIC_TTL = Duration.ofSeconds(60);
 
     private final VehicleRepository repo;
+    private final DriverRepository drivers;
 
     /** Immutable snapshot; readers only do a volatile read, no locks. */
     private record Snapshot(List<VehicleResponse> vehicles, long expiresAtMillis) {}
 
     private volatile Snapshot activeCache;
 
-    public VehicleService(VehicleRepository repo) {
+    public VehicleService(VehicleRepository repo, DriverRepository drivers) {
         this.repo = repo;
+        this.drivers = drivers;
     }
 
     public List<VehicleResponse> listPublic() {
@@ -92,6 +95,10 @@ public class VehicleService {
     public void delete(UUID id) {
         if (!repo.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Vehicle not found");
+        }
+        if (drivers.existsByVehicleId(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "This vehicle is assigned to a driver. Unassign the driver first.");
         }
         repo.deleteById(id);
         evict();

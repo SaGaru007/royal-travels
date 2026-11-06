@@ -7,9 +7,11 @@ import {
   ApiError,
   Booking,
   BookingStatus,
+  Driver,
   PaymentStatus,
   TripStage,
   getBookings,
+  getDrivers,
   updateBooking,
 } from "@/lib/api";
 import { clearAdminSession, getAdminToken } from "@/lib/auth";
@@ -34,6 +36,7 @@ const STATUS_STYLES: Record<BookingStatus, string> = {
 export default function BookingsPage() {
   const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<"all" | BookingStatus>("all");
@@ -61,8 +64,12 @@ export default function BookingsPage() {
     setLoading(true);
     setError(null);
     try {
-      const page = await getBookings(token, { size: 500 });
+      const [page, roster] = await Promise.all([
+        getBookings(token, { size: 500 }),
+        getDrivers(token),
+      ]);
       setBookings(page.content);
+      setDrivers(roster);
     } catch (err) {
       if (!handleAuthError(err)) {
         setError(
@@ -92,6 +99,9 @@ export default function BookingsPage() {
     return bookings.filter((booking) => {
       if (statusFilter !== "all" && booking.status !== statusFilter) return false;
       if (!needle) return true;
+      const assigned = booking.driverId
+        ? drivers.find((driver) => driver.id === booking.driverId)?.name ?? ""
+        : "";
       return [
         booking.name,
         booking.phone,
@@ -99,12 +109,18 @@ export default function BookingsPage() {
         shortReference(booking.id),
         booking.pickupLocation ?? "",
         booking.dropLocation ?? "",
+        assigned,
       ]
         .join(" ")
         .toLowerCase()
         .includes(needle);
     });
-  }, [bookings, statusFilter, query]);
+  }, [bookings, drivers, statusFilter, query]);
+
+  const driverById = useMemo(
+    () => new Map(drivers.map((driver) => [driver.id, driver])),
+    [drivers]
+  );
 
   const revenue = useMemo(
     () =>
@@ -117,7 +133,12 @@ export default function BookingsPage() {
 
   async function patchBooking(
     id: string,
-    payload: { status?: BookingStatus; paymentStatus?: PaymentStatus; tripStage?: TripStage }
+    payload: {
+      status?: BookingStatus;
+      paymentStatus?: PaymentStatus;
+      tripStage?: TripStage;
+      driverId?: string;
+    }
   ) {
     const token = getAdminToken();
     if (!token) return;
@@ -155,6 +176,7 @@ export default function BookingsPage() {
         "Status",
         "Payment",
         "Fare",
+        "Driver",
       ],
       ...filtered.map((booking) => [
         shortReference(booking.id),
@@ -170,6 +192,7 @@ export default function BookingsPage() {
         booking.status,
         booking.paymentStatus,
         String(booking.totalFare ?? booking.baseFare ?? ""),
+        booking.driverId ? driverById.get(booking.driverId)?.name ?? booking.driverId : "",
       ]),
     ];
     const csv = rows
@@ -272,7 +295,7 @@ export default function BookingsPage() {
                   <th className="p-4 font-medium">Payment</th>
                   <th className="p-4 font-medium">Status</th>
                   <th className="p-4 font-medium">Trip stage</th>
-                  <th className="p-4 font-medium">Driver</th>
+                  <th className="p-4 font-medium">Driver &amp; handoff</th>
                 </tr>
               </thead>
               <tbody>
@@ -379,16 +402,53 @@ export default function BookingsPage() {
                         <option value="completed">Completed</option>
                       </select>
                     </td>
-                    <td className="p-4">
+                    <td className="p-4 min-w-[190px]">
+                      <select
+                        value={booking.driverId ?? ""}
+                        disabled={updating === booking.id}
+                        onChange={(event) =>
+                          patchBooking(booking.id, {
+                            driverId: event.target.value,
+                          })
+                        }
+                        className="text-xs border border-line rounded-md px-2 py-1.5 bg-cream w-full"
+                        aria-label={`Assign driver to ${shortReference(booking.id)}`}
+                      >
+                        <option value="">Unassigned</option>
+                        {drivers.map((driver) => (
+                          <option key={driver.id} value={driver.id}>
+                            {driver.name}
+                            {driver.vehicleId ? "" : " (no vehicle)"}
+                          </option>
+                        ))}
+                      </select>
                       <button
                         type="button"
-                        onClick={() => assignOnWhatsApp(booking)}
-                        className="text-xs border border-line rounded-md px-2.5 py-1.5 hover:bg-cream whitespace-nowrap"
-                        title="Opens WhatsApp with the full trip details pre-filled"
+                        onClick={() =>
+                          assignOnWhatsApp(
+                            booking,
+                            booking.driverId
+                              ? driverById.get(booking.driverId)
+                              : undefined
+                          )
+                        }
+                        className="mt-2 text-xs border border-line rounded-md px-2.5 py-1.5 hover:bg-cream whitespace-nowrap w-full"
+                        title={
+                          booking.driverId
+                            ? "Opens WhatsApp with the trip details pre-filled for the assigned driver"
+                            : "No driver assigned yet — you can still enter a number manually"
+                        }
                       >
-                        WhatsApp →
+                        {booking.driverId ? "WhatsApp driver →" : "WhatsApp →"}
                       </button>
-                      <div className="text-[10px] text-muted mt-1">Send trip</div>
+                      {drivers.length === 0 && (
+                        <a
+                          href="/admin/drivers"
+                          className="block text-[10px] text-goldDeep mt-1 hover:underline"
+                        >
+                          + Add your first driver
+                        </a>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -403,15 +463,20 @@ export default function BookingsPage() {
 
 /**
  * Hands a confirmed trip to a driver over WhatsApp using the free click-to-chat
- * link (no Business API, no per-message cost). The admin types the driver's
- * number once; the message carries every detail the driver needs.
+ * link (no Business API, no per-message cost). When a driver is assigned in the
+ * roster their saved number is used; otherwise the admin can type one.
  */
-function assignOnWhatsApp(booking: Booking) {
-  const entered = window.prompt(
-    `Driver WhatsApp number for ${shortReference(booking.id)} (10 digits, or with country code)`,
-    "91"
-  );
-  if (entered === null) return;
+function assignOnWhatsApp(booking: Booking, driver?: Driver) {
+  let entered = driver?.phone ?? "";
+
+  if (!entered) {
+    const promptValue = window.prompt(
+      `Driver WhatsApp number for ${shortReference(booking.id)} (10 digits, or with country code)`,
+      "91"
+    );
+    if (promptValue === null) return;
+    entered = promptValue;
+  }
 
   const digits = entered.replace(/\D/g, "");
   if (digits.length < 10) {
@@ -420,9 +485,11 @@ function assignOnWhatsApp(booking: Booking) {
   }
   const to = digits.length === 10 ? `91${digits}` : digits;
 
+  const tripSheetUrl = `${window.location.origin}/driver/trip?id=${booking.id}`;
   const lines = [
     "*ROYAL TRAVELS — TRIP ASSIGNMENT*",
     "",
+    driver ? `Driver: ${driver.name}` : "",
     `Booking ref: ${shortReference(booking.id)}`,
     `Service: ${booking.serviceType.toUpperCase()}`,
     "",
@@ -437,6 +504,9 @@ function assignOnWhatsApp(booking: Booking) {
     booking.vehiclePreference ? `Vehicle requested: ${booking.vehiclePreference}` : "",
     booking.notes ? `Notes: ${booking.notes}` : "",
     "",
+    `Open your trip sheet: ${tripSheetUrl}`,
+    "(Enter this booking reference and your own phone number.)",
+    "",
     "Reply CONFIRM to accept this trip.",
   ].filter((line) => line !== "");
 
@@ -447,7 +517,8 @@ function assignOnWhatsApp(booking: Booking) {
   );
 }
 
-function Stat({ label, value, sub }: { label: string; value: string; sub: string }) {  return (
+function Stat({ label, value, sub }: { label: string; value: string; sub: string }) {
+  return (
     <div className="bg-white border border-line rounded-xl p-5">
       <p className="text-[11px] uppercase tracking-wide text-muted mb-2">{label}</p>
       <p className="text-2xl font-bold text-ink">{value}</p>

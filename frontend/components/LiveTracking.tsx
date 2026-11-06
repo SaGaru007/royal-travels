@@ -49,6 +49,24 @@ export default function LiveTracking() {
     setChecking(false);
   }, [bookingId]);
 
+  // While a trip is live, poll the same secure lookup so the customer sees the
+  // driver's start/completion without reloading. 30s is far below the lookup
+  // rate limit and is plenty for status changes (this is not GPS).
+  useEffect(() => {
+    if (!booking || !phone) return;
+    if (booking.status === "completed" || booking.status === "cancelled") return;
+
+    const timer = window.setInterval(async () => {
+      try {
+        setBooking(await lookupBooking(booking.id, phone));
+      } catch {
+        // A transient network error must not wipe the screen; the next tick retries.
+      }
+    }, 30_000);
+
+    return () => window.clearInterval(timer);
+  }, [booking?.id, booking?.status, booking?.tripStage, phone]);
+
   async function handleLookup(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
@@ -212,11 +230,12 @@ export default function LiveTracking() {
 
             <div className="mt-5 bg-gold/10 border border-gold/40 rounded-lg p-4">
               <p className="text-xs font-semibold text-goldDeep uppercase tracking-wide mb-1">
-                Live GPS coming soon
+                Live status
               </p>
               <p className="text-xs text-ink/70 leading-relaxed">
-                Driver location sharing is not enabled yet. Your status reflects
-                the updates our dispatch team records in the booking system.
+                This page refreshes automatically every 30 seconds while the trip
+                is active, so driver start/completion updates appear without a
+                reload. Live GPS location sharing is not enabled yet.
               </p>
             </div>
           </div>

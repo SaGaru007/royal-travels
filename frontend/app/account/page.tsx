@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ApiError, Booking, getCustomerBookings } from "@/lib/api";
+import { formatTime } from "@/lib/format";
 import {
   CustomerSession,
   clearCustomerSession,
@@ -145,7 +146,7 @@ export default function AccountPage() {
 
                   <p className="text-xs text-muted mt-1">
                     {formatDate(booking.pickupDate)}
-                    {booking.pickupTime ? ` · ${booking.pickupTime}` : ""} · Ref{" "}
+                    {booking.pickupTime ? ` · ${formatTime(booking.pickupTime)}` : ""} · Ref{" "}
                     <span className="font-mono">{booking.id.slice(0, 8)}</span>
                   </p>
                 </div>

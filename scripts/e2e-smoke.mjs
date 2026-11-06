@@ -195,6 +195,88 @@ if (!EMAIL || !PASSWORD) {
 
   const docs = await call("/v3/api-docs");
   check("OpenAPI contract is served", docs.status === 200 && docs.json?.openapi?.startsWith("3."));
+
+  // ------------------------------------------------------------ driver roster
+  const roster = await call("/api/admin/drivers", { token });
+  check("admin can list drivers", roster.status === 200 && Array.isArray(roster.json), `status=${roster.status}`);
+
+  const driverPhone = "+919999000444";
+  const driverRes = await call("/api/admin/drivers", {
+    method: "POST",
+    token,
+    body: {
+      name: `E2E Driver ${stamp}`,
+      phone: driverPhone,
+      rating: 4.8,
+      tripsCompleted: 12,
+      licenseVerified: true,
+      status: "available",
+    },
+  });
+  const driverId = driverRes.json?.id ?? null;
+  check("admin can add a driver", driverRes.status === 201 && Boolean(driverId), `status=${driverRes.status} ${driverRes.text.slice(0, 120)}`);
+
+  const duplicateDriver = await call("/api/admin/drivers", {
+    method: "POST",
+    token,
+    body: { name: "Duplicate", phone: driverPhone },
+  });
+  check("duplicate driver phone rejected", duplicateDriver.status === 409, `status=${duplicateDriver.status}`);
+
+  const assign = await call(`/api/bookings/${bookingId}`, {
+    method: "PATCH",
+    token,
+    body: { driverId },
+  });
+  check("admin can assign a driver to a booking", assign.status === 200 && assign.json?.driverId === driverId, `status=${assign.status}`);
+
+  const tripSheet = await call("/api/driver/trips/lookup", {
+    method: "POST",
+    body: { id: bookingId, phone: driverPhone },
+  });
+  check("assigned driver can open the trip sheet", tripSheet.status === 200 && tripSheet.json?.booking?.id === bookingId,
+    `status=${tripSheet.status}`);
+
+  const tripBadPhone = await call("/api/driver/trips/lookup", {
+    method: "POST",
+    body: { id: bookingId, phone: "+919999000555" },
+  });
+  check("trip sheet rejects a wrong driver phone", tripBadPhone.status === 404, `status=${tripBadPhone.status}`);
+
+  const started = await call(`/api/driver/trips/${bookingId}/stage`, {
+    method: "PATCH",
+    body: { phone: driverPhone, stage: "started" },
+  });
+  check("driver can start the trip", started.status === 200 && started.json?.booking?.tripStage === "started",
+    `status=${started.status}`);
+
+  const finished = await call(`/api/driver/trips/${bookingId}/stage`, {
+    method: "PATCH",
+    body: { phone: driverPhone, stage: "completed" },
+  });
+  check("driver can complete the trip", finished.status === 200 && finished.json?.booking?.status === "completed",
+    `status=${finished.status}`);
+
+  const deleteAssigned = await call(`/api/admin/drivers/${driverId}`, { method: "DELETE", token });
+  check("assigned driver cannot be deleted", deleteAssigned.status === 409, `status=${deleteAssigned.status}`);
+
+  const unassign = await call(`/api/bookings/${bookingId}`, {
+    method: "PATCH",
+    token,
+    body: { driverId: "" },
+  });
+  check("admin can unassign a driver", unassign.status === 200 && unassign.json?.driverId === null, `status=${unassign.status}`);
+
+  const deleteDriver = await call(`/api/admin/drivers/${driverId}`, { method: "DELETE", token });
+  check("unassigned driver can be removed", deleteDriver.status === 204, `status=${deleteDriver.status}`);
+
+  const wrongPasswordChange = await call("/api/admin/password", {
+    method: "POST",
+    token,
+    body: { currentPassword: "not-the-password", newPassword: "AnotherPass123" },
+  });
+  check("password change requires the current password", wrongPasswordChange.status === 400,
+    `status=${wrongPasswordChange.status}`);
 }
 
 // --------------------------------------------------------- customer accounts

@@ -15,6 +15,8 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
 
     List<Booking> findByCreatedAtAfter(OffsetDateTime since);
 
+    boolean existsByDriverId(UUID driverId);
+
     // Params are always passed as non-null strings (empty string means "no
     // filter"). Using `:q is null` here makes PostgreSQL infer the null bind
     // parameter as bytea, which breaks lower().

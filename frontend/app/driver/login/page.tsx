@@ -13,17 +13,24 @@ export default function DriverLoginPage() {
           </span>
           <p className="eyebrow mt-5">Driver Portal</p>
           <h1 className="text-2xl font-bold text-ink mt-2">
-            Chauffeur login is coming soon
+            No driver password needed
           </h1>
           <p className="text-sm text-muted mt-3 leading-relaxed">
-            Driver accounts, trip sheets, and live location sharing are not
-            enabled yet. Our dispatch team assigns trips by phone in the
-            meantime.
+            Dispatch sends each trip on WhatsApp with a trip-sheet link. Open
+            that link and confirm your phone number to see the guest, route, and
+            pickup time. There is no separate driver account to remember.
           </p>
-          <a href="tel:+919986780221" className="btn-primary mt-6">
-            📞 Contact dispatch
-          </a>
+          <Link href="/driver/trip" className="btn-primary mt-6">
+            Open a trip sheet
+          </Link>
           <p className="text-xs text-muted mt-6">
+            Need the link? Call dispatch on{" "}
+            <a href="tel:+919986780221" className="text-ink underline underline-offset-2">
+              +91 99867 80221
+            </a>
+            .
+          </p>
+          <p className="text-xs text-muted mt-3">
             <Link href="/" className="hover:text-ink">
               ← Back to Royal Travels
             </Link>

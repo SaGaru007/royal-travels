@@ -33,7 +33,8 @@ public record BookingResponse(
         BigDecimal advanceAmount,
         String paymentStatus,
         String status,
-        String tripStage
+        String tripStage,
+        UUID driverId
 ) {
     public static BookingResponse from(Booking b) {
         return new BookingResponse(
@@ -42,7 +43,7 @@ public record BookingResponse(
                 b.getTransferType(), b.getFlightNumber(), b.getPickupDate(), b.getPickupTime(),
                 b.getVehiclePreference(), b.getPassengers(), b.getPreferredCallTime(), b.getNotes(),
                 b.getBaseFare(), b.getTotalFare(), b.getAdvanceAmount(),
-                b.getPaymentStatus(), b.getStatus(), b.getTripStage()
+                b.getPaymentStatus(), b.getStatus(), b.getTripStage(), b.getDriverId()
         );
     }
 }

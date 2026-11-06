@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 
 const navLinks = [
@@ -12,10 +15,16 @@ const navLinks = [
 ];
 
 export default function Header() {
+  const [open, setOpen] = useState(false);
+
   return (
     <header className="sticky top-0 z-50 bg-cream/95 backdrop-blur border-b border-line">
       <div className="max-w-content mx-auto container-px h-20 flex items-center justify-between gap-6">
-        <Link href="/" className="flex items-center gap-3 shrink-0">
+        <Link
+          href="/"
+          className="flex items-center gap-3 shrink-0"
+          onClick={() => setOpen(false)}
+        >
           <span className="w-9 h-9 rounded-full bg-ink flex items-center justify-center text-cream text-sm">
             ◆
           </span>
@@ -59,7 +68,53 @@ export default function Header() {
             Instant Booking
           </Link>
         </div>
+
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          aria-expanded={open}
+          aria-controls="mobile-nav"
+          aria-label={open ? "Close menu" : "Open menu"}
+          className="lg:hidden inline-flex items-center justify-center w-10 h-10 rounded-md border border-line bg-white text-ink"
+        >
+          <span aria-hidden className="text-lg leading-none">
+            {open ? "✕" : "☰"}
+          </span>
+        </button>
       </div>
+
+      {open && (
+        <div id="mobile-nav" className="lg:hidden border-t border-line bg-cream">
+          <nav className="max-w-content mx-auto container-px py-3 grid grid-cols-2 gap-1">
+            {navLinks.map((link) => (
+              <Link
+                key={link.label}
+                href={link.href}
+                onClick={() => setOpen(false)}
+                className="text-sm text-ink/80 hover:text-ink px-3 py-2.5 rounded-md hover:bg-white"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+          <div className="max-w-content mx-auto container-px pb-4 flex flex-col gap-2">
+            <a
+              href="tel:+919986780221"
+              className="border border-line rounded-md px-3 py-2.5 text-sm bg-white"
+            >
+              <span className="block text-[10px] text-emerald-700">24/7 dispatch</span>
+              <span className="font-semibold text-ink">+91 99867 80221</span>
+            </a>
+            <Link
+              href="/#booking"
+              onClick={() => setOpen(false)}
+              className="bg-ink text-cream text-sm font-medium px-4 py-3 rounded-md text-center"
+            >
+              Instant Booking
+            </Link>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
