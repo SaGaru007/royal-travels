@@ -92,8 +92,12 @@ Also check the browser console for CORS errors: the frontend origin must be in
 
 - **No online payments**: bookings are requests; the concierge confirms fare and
   payment offline. Do not add card fields without a PCI-compliant provider.
-- **No driver app / GPS**: the public tracking page shows real booking status,
-  not live location. This is labelled in the UI.
+- **Driver trip sheet, no GPS**: assigned drivers open `/driver/trip` with the
+  booking reference + their phone, and can mark the trip started/completed.
+  Live GPS sharing is still labelled as coming soon.
+- **Rotate the owner password** from `/admin/settings` immediately after the
+  first production login; an admin password typed into a chat or committed to
+  local config should be treated as compromised.
 - **Backups**: Supabase free tier includes limited backups. Export the
   `bookings` table periodically until a paid backup policy exists.
 - **Logs**: Render keeps recent logs; the app writes to stdout.
