@@ -51,7 +51,8 @@ To boot the context test against the configured database:
 
 It is an integration test in disguise. It uses the same remote Supabase database
 as development, so never run it against production data with destructive
-expectations. It performs no writes.
+expectations. The test itself performs no writes, but startup may create the
+bootstrap owner if that email is missing.
 
 ### 2.2 Frontend
 
