@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ApiError, Booking, lookupBooking } from "@/lib/api";
 import { getLastBooking } from "@/lib/bookingSession";
+import LiveMap from "./LiveMap";
 import {
   formatDate,
   formatDateTime,
@@ -40,18 +41,24 @@ export default function LiveTracking() {
   const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [trail, setTrail] = useState<[number, number][]>([]);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     const cached = getLastBooking();
     if (cached && (!bookingId || cached.id === bookingId)) {
       setBooking(cached);
+      // The cached booking already proves this browser created it, and the
+      // lookup needs the same phone anyway. Without this, a customer arriving
+      // from the confirmation page would never start live polling.
+      setPhone(cached.phone);
     }
     setChecking(false);
   }, [bookingId]);
 
   // While a trip is live, poll the same secure lookup so the customer sees the
-  // driver's start/completion without reloading. 30s is far below the lookup
-  // rate limit and is plenty for status changes (this is not GPS).
+  // driver's position and start/completion without reloading. 15 s is 40 calls
+  // per 10 minutes, inside the 60-request lookup limit.
   useEffect(() => {
     if (!booking || !phone) return;
     if (booking.status === "completed" || booking.status === "cancelled") return;
@@ -62,10 +69,28 @@ export default function LiveTracking() {
       } catch {
         // A transient network error must not wipe the screen; the next tick retries.
       }
-    }, 30_000);
+    }, 15_000);
 
     return () => window.clearInterval(timer);
   }, [booking?.id, booking?.status, booking?.tripStage, phone]);
+
+  // Keep the "last seen" label honest without refetching anything.
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 15_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  // Remember where the driver has been during this visit, so the map shows a
+  // breadcrumb trail instead of a dot that teleports.
+  useEffect(() => {
+    if (booking?.driverLat == null || booking.driverLng == null) return;
+    const point: [number, number] = [booking.driverLat, booking.driverLng];
+    setTrail((previous) => {
+      const last = previous[previous.length - 1];
+      if (last && last[0] === point[0] && last[1] === point[1]) return previous;
+      return [...previous.slice(-39), point];
+    });
+  }, [booking?.driverLat, booking?.driverLng]);
 
   async function handleLookup(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -157,6 +182,14 @@ export default function LiveTracking() {
   const reference = shortReference(booking.id);
   const current = stageIndex(booking);
   const cancelled = booking.status === "cancelled";
+  const hasLocation = booking.driverLat != null && booking.driverLng != null;
+  const completed = booking.tripStage === "completed" || booking.status === "completed";
+  // Phones throttle background tabs hard, so a gap does not mean the driver
+  // vanished. Two minutes is the point where the dot stops being trustworthy.
+  const stale =
+    hasLocation &&
+    booking.driverLocationAt != null &&
+    now - new Date(booking.driverLocationAt).getTime() > 120_000;
 
   return (
     <div className="max-w-content mx-auto container-px py-10">
@@ -174,6 +207,36 @@ export default function LiveTracking() {
           View confirmation
         </Link>
       </div>
+
+      {hasLocation && !cancelled && !completed && (
+        <div className="mt-6 bg-white border border-line rounded-xl p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <p className="text-[11px] font-semibold tracking-wide text-goldDeep">
+              LIVE DRIVER LOCATION
+            </p>
+            <span
+              className={`text-[10px] font-medium px-2.5 py-1 rounded-full ${
+                stale ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"
+              }`}
+            >
+              {stale
+                ? `Last seen ${timeAgo(booking.driverLocationAt!, now)}`
+                : "Updating every 15 s"}
+            </span>
+          </div>
+          <LiveMap
+            lat={booking.driverLat!}
+            lng={booking.driverLng!}
+            trail={trail}
+            stale={stale}
+          />
+          <p className="text-xs text-muted mt-2 leading-relaxed">
+            {stale
+              ? "The driver's phone stopped reporting — it may be asleep or out of signal. Call the chauffeur if you need an update."
+              : "The dot is the driver's last reported position. It is not a guaranteed live feed and does not replace calling the chauffeur."}
+          </p>
+        </div>
+      )}
 
       <div className="grid lg:grid-cols-[1.3fr_1fr] gap-6 items-start mt-8">
         <div className="space-y-5">
@@ -233,9 +296,11 @@ export default function LiveTracking() {
                 Live status
               </p>
               <p className="text-xs text-ink/70 leading-relaxed">
-                This page refreshes automatically every 30 seconds while the trip
-                is active, so driver start/completion updates appear without a
-                reload. Live GPS location sharing is not enabled yet.
+                {hasLocation
+                  ? "Your chauffeur's last reported position appears on the map above and refreshes every 15 seconds while the trip is active."
+                  : booking.tripStage === "started"
+                  ? "Your trip has started. The map appears as soon as the chauffeur's phone reports a position — ask them to tap Share live location."
+                  : "This page refreshes every 15 seconds while the trip is active. The live map appears once your chauffeur starts the trip and shares location."}
               </p>
             </div>
           </div>
@@ -322,4 +387,12 @@ function Row({ label, value }: { label: string; value: string }) {
       <dd className="text-ink text-xs font-medium text-right break-words">{value}</dd>
     </div>
   );
+}
+
+function timeAgo(iso: string, now: number) {
+  const seconds = Math.max(1, Math.round((now - new Date(iso).getTime()) / 1000));
+  if (seconds < 90) return `${seconds}s ago`;
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 90) return `${minutes} min ago`;
+  return `${Math.round(minutes / 60)} h ago`;
 }

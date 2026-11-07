@@ -32,6 +32,10 @@ export interface Booking {
   status: BookingStatus;
   tripStage: TripStage;
   driverId?: string | null;
+  /** Last position shared by the assigned driver, or null when never shared. */
+  driverLat?: number | null;
+  driverLng?: number | null;
+  driverLocationAt?: string | null;
 }
 
 export interface BookingCreate {
@@ -412,6 +416,21 @@ export function updateDriverStage(
 ) {
   return request<DriverTripResponse>(`/api/driver/trips/${id}/stage`, {
     method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * One position report from the driver's phone. Called every few seconds while
+ * the driver keeps the trip sheet open; the API rejects reports for trips that
+ * are not started.
+ */
+export function postDriverLocation(
+  id: string,
+  payload: { phone: string; lat: number; lng: number }
+) {
+  return request<void>(`/api/driver/trips/${id}/location`, {
+    method: "POST",
     body: JSON.stringify(payload),
   });
 }

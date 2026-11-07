@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -8,6 +8,7 @@ import {
   Booking,
   DriverTripResponse,
   getDriverTrip,
+  postDriverLocation,
   updateDriverStage,
 } from "@/lib/api";
 import { formatDate, formatTime, shortReference } from "@/lib/format";
@@ -35,6 +36,13 @@ export default function DriverTripSheet() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(false);
+
+  const [sharing, setSharing] = useState(false);
+  const [lastSent, setLastSent] = useState<Date | null>(null);
+  const [shareError, setShareError] = useState<string | null>(null);
+  const watchIdRef = useRef<number | null>(null);
+  const lastSentAtRef = useRef(0);
+  const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
 
   async function handleLookup(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -69,6 +77,7 @@ export default function DriverTripSheet() {
     setError(null);
     try {
       setTrip(await updateDriverStage(trip.booking.id, { phone, stage }));
+      if (stage === "completed") stopSharing();
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);
@@ -79,6 +88,94 @@ export default function DriverTripSheet() {
       setUpdating(false);
     }
   }
+
+  function stopSharing() {
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+    setSharing(false);
+    // Wake locks are best-effort; release failures are not worth surfacing.
+    wakeLockRef.current?.release().catch(() => undefined);
+    wakeLockRef.current = null;
+  }
+
+  async function keepScreenAwake() {
+    try {
+      const nav = navigator as Navigator & {
+        wakeLock?: { request: (type: "screen") => Promise<{ release: () => Promise<void> }> };
+      };
+      if (nav.wakeLock) {
+        wakeLockRef.current = await nav.wakeLock.request("screen");
+      }
+    } catch {
+      // Unsupported or denied: sharing still works, the screen may sleep.
+    }
+  }
+
+  function startSharing() {
+    if (!trip) return;
+    if (!("geolocation" in navigator)) {
+      setShareError("This browser cannot share location. Ask dispatch to track the trip by phone.");
+      return;
+    }
+    setShareError(null);
+    setSharing(true);
+    lastSentAtRef.current = 0;
+    setLastSent(null);
+
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (position) => {
+        // One report every 10 s is enough for a car at city speed and stays
+        // well inside the endpoint's rate limit.
+        const now = Date.now();
+        if (now - lastSentAtRef.current < 10_000) return;
+        lastSentAtRef.current = now;
+
+        void postDriverLocation(trip.booking.id, {
+          phone,
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        })
+          .then(() => setLastSent(new Date()))
+          .catch((err) => {
+            if (err instanceof ApiError && err.status === 409) {
+              // Trip completed or cancelled elsewhere: no point continuing.
+              stopSharing();
+              setShareError(err.message);
+            } else if (err instanceof ApiError && err.status === 429) {
+              // Too many reports from this network; the next tick retries.
+            } else {
+              setShareError(
+                err instanceof ApiError ? err.message : "Could not send your position."
+              );
+            }
+          });
+      },
+      (geoError) => {
+        stopSharing();
+        setShareError(
+          geoError.code === geoError.PERMISSION_DENIED
+            ? "Location permission was blocked. Allow location for this site in your browser settings, then tap Share again."
+            : "Could not read a GPS fix. Move to an open area and try again."
+        );
+      },
+      { enableHighAccuracy: true, maximumAge: 5_000, timeout: 20_000 }
+    );
+
+    void keepScreenAwake();
+  }
+
+  // Never leave a watcher or a wake lock behind when the driver closes the page.
+  useEffect(
+    () => () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+      wakeLockRef.current?.release().catch(() => undefined);
+    },
+    []
+  );
 
   const mapsLink = useMemo(() => {
     if (!trip) return "#";
@@ -298,13 +395,53 @@ export default function DriverTripSheet() {
           </>
         ) : started ? (
           <>
-            <p className="text-sm text-muted mb-4">
-              The customer can see that this trip is in progress.
-            </p>
+            <div className="text-left border border-line rounded-lg p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-ink">Live location</p>
+                  <p className="text-xs text-muted mt-0.5 leading-relaxed">
+                    {sharing
+                      ? lastSent
+                        ? `Sharing · updated ${lastSent.toLocaleTimeString()}`
+                        : "Waiting for a GPS fix…"
+                      : "Let the customer watch you approach on the map."}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={sharing ? stopSharing : startSharing}
+                  className={`shrink-0 text-xs py-2 px-3 rounded-md font-medium ${
+                    sharing
+                      ? "border border-line bg-white text-ink"
+                      : "bg-emerald-600 text-white"
+                  }`}
+                >
+                  {sharing ? "Stop sharing" : "Share live location"}
+                </button>
+              </div>
+
+              {sharing && (
+                <p className="text-[11px] text-muted mt-2 leading-relaxed">
+                  Keep this page open while sharing. It stops automatically when
+                  you complete the trip, and the customer only sees your last
+                  reported point.
+                </p>
+              )}
+
+              {shareError && (
+                <p
+                  role="alert"
+                  className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2 mt-2"
+                >
+                  {shareError}
+                </p>
+              )}
+            </div>
+
             <button
               onClick={() => changeStage("completed")}
               disabled={updating}
-              className="w-full bg-ink text-cream text-base font-semibold py-4 rounded-xl disabled:opacity-60"
+              className="w-full mt-4 bg-ink text-cream text-base font-semibold py-4 rounded-xl disabled:opacity-60"
             >
               {updating ? "Updating…" : "✓ Complete Trip"}
             </button>
@@ -327,8 +464,8 @@ export default function DriverTripSheet() {
       </div>
 
       <p className="text-xs text-muted text-center leading-relaxed">
-        Live GPS sharing is not enabled yet — status updates are shared with the
-        customer and dispatch. For changes, call the office on{" "}
+        Location sharing works only while this trip sheet stays open. For
+        changes, call the office on{" "}
         <a href="tel:+919986780221" className="text-ink underline underline-offset-2">
           +91 99867 80221
         </a>

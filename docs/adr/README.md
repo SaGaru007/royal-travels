@@ -13,6 +13,7 @@ changes, write a new ADR that supersedes the old one rather than editing history
 | [0005](0005-whatsapp-click-to-chat.md) | Free WhatsApp click-to-chat for driver dispatch | Accepted |
 | [0006](0006-free-tier-hosting.md) | Render + Vercel + Supabase free tier | Accepted |
 | [0007](0007-single-instance-cache-and-limiter.md) | In-process cache and rate limiter | Accepted |
+| [0008](0008-live-driver-location.md) | Browser-based live driver location | Accepted |
 
 ## Template
 

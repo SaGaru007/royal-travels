@@ -34,7 +34,10 @@ public record BookingResponse(
         String paymentStatus,
         String status,
         String tripStage,
-        UUID driverId
+        UUID driverId,
+        Double driverLat,
+        Double driverLng,
+        OffsetDateTime driverLocationAt
 ) {
     public static BookingResponse from(Booking b) {
         return new BookingResponse(
@@ -43,7 +46,8 @@ public record BookingResponse(
                 b.getTransferType(), b.getFlightNumber(), b.getPickupDate(), b.getPickupTime(),
                 b.getVehiclePreference(), b.getPassengers(), b.getPreferredCallTime(), b.getNotes(),
                 b.getBaseFare(), b.getTotalFare(), b.getAdvanceAmount(),
-                b.getPaymentStatus(), b.getStatus(), b.getTripStage(), b.getDriverId()
+                b.getPaymentStatus(), b.getStatus(), b.getTripStage(), b.getDriverId(),
+                b.getDriverLat(), b.getDriverLng(), b.getDriverLocationAt()
         );
     }
 }

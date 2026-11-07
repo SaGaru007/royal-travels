@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 const cards = [
   {
     icon: "🗺",
@@ -43,18 +45,24 @@ export default function Offerings() {
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">
-          <img
+          <Image
             src="https://images.unsplash.com/photo-1549924231-f129b911e442?q=80&w=1000&auto=format&fit=crop"
             alt="Chauffeured SUV outside a hotel"
+            width={1000}
+            height={700}
+            sizes="(max-width: 768px) 100vw, 33vw"
             className="rounded-xl object-cover w-full h-full min-h-[260px]"
           />
           <ServiceCard {...cards[0]} />
           <ServiceCard {...cards[1]} />
           <ServiceCard {...cards[2]} />
           <ServiceCard {...cards[3]} />
-          <img
+          <Image
             src="https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?q=80&w=1000&auto=format&fit=crop"
             alt="Luxury van interior"
+            width={1000}
+            height={700}
+            sizes="(max-width: 768px) 100vw, 33vw"
             className="rounded-xl object-cover w-full h-full min-h-[260px]"
           />
         </div>

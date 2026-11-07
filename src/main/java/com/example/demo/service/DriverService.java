@@ -9,12 +9,14 @@ import com.example.demo.dto.DriverRequest;
 import com.example.demo.dto.DriverResponse;
 import com.example.demo.dto.DriverStageRequest;
 import com.example.demo.dto.DriverTripResponse;
+import com.example.demo.dto.DriverLocationRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -129,6 +131,37 @@ public class DriverService {
         bookings.save(booking);
         repo.save(driver);
         return DriverTripResponse.from(booking, driver);
+    }
+
+    /**
+     * Records a position report from the assigned driver's phone. Deliberately
+     * cheap: it runs every few seconds while a trip is live, so it does not
+     * sweep other bookings or touch the driver row.
+     *
+     * <p>Only a started trip accepts positions. That prevents a closed trip
+     * from keeping a moving dot on the customer's map, and it makes the
+     * driver's consent explicit: they must tap "Start trip" first.
+     */
+    @Transactional
+    public void updateLocation(UUID bookingId, DriverLocationRequest req) {
+        Booking booking = findBooking(bookingId);
+        assignedDriver(booking, req.phone());
+
+        if ("completed".equals(booking.getTripStage())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This trip is already completed");
+        }
+        if ("cancelled".equals(booking.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This booking was cancelled");
+        }
+        if (!"started".equals(booking.getTripStage())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Start the trip before sharing your location");
+        }
+
+        booking.setDriverLat(req.lat());
+        booking.setDriverLng(req.lng());
+        booking.setDriverLocationAt(OffsetDateTime.now());
+        bookings.save(booking);
     }
 
     private Driver assignedDriver(Booking booking, String phone) {

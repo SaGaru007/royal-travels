@@ -232,6 +232,7 @@ reference with examples: [docs/api.md](docs/api.md).
 | POST | `/admin/password` | OWNER/STAFF | Change the signed-in password |
 | POST | `/driver/trips/lookup` | — | Driver trip sheet (UUID **and** driver phone) |
 | PATCH | `/driver/trips/{id}/stage` | — | Driver marks started/completed |
+| POST | `/driver/trips/{id}/location` | — | Driver reports position (started trips only) |
 
 Errors are RFC 7807 `application/problem+json` via a global exception handler.
 Rate-limited routes return `429` with `Retry-After`.

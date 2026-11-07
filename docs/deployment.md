@@ -78,6 +78,17 @@ Wait for `Started RoyalTravelsApplication`. If Hibernate reports a
 schema-validation error, fix the schema before deploying. See
 [database.md](database.md).
 
+Before the first deploy that includes live tracking, apply the additive
+migration (safe to run more than once):
+
+```powershell
+psql "$env:DB_URL" -f db/live_tracking.sql
+```
+
+It adds `bookings.current_location_at`; `current_lat` and `current_lng` already
+existed and were reserved for this. Deploying the API before the column exists
+makes startup fail validation, so run the SQL first.
+
 ### 1.5 Optional but recommended: rotate the database password
 
 Supabase → **Project Settings → Database → Reset database password**. Update
@@ -271,6 +282,13 @@ Timeout:  60 seconds
 
 This does not make the service always-on; it reduces the chance of a cold start
 for the first visitor. For guaranteed latency, use a paid Render instance.
+
+The repository also ships `.github/workflows/keepalive.yml`, which pings
+`/api/health` every 10 minutes from GitHub Actions. It needs no account, but
+GitHub schedules are best-effort (they can run late) and are disabled after 60
+days without repository activity. Use it as a fallback, or delete it if you
+prefer cron-job.org as the single monitor. Do not point a monitor at anything
+that writes data or requires a token.
 
 ---
 

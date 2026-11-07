@@ -42,6 +42,15 @@ public class RateLimitFilter extends OncePerRequestFilter {
             "POST /api/bookings/lookup", new Limit(60, Duration.ofMinutes(10)),
             "POST /api/driver/trips/lookup", new Limit(60, Duration.ofMinutes(10)));
 
+    /**
+     * Paths with a variable segment (the trip id) cannot be matched by the
+     * exact map above. A driver reporting every 10 s is 60 requests per
+     * 10 minutes, so this leaves room for a shared IP without allowing a
+     * flood. Exact entries win over prefixes because they are checked first.
+     */
+    private static final Map<String, Limit> PREFIX_LIMITS = Map.of(
+            "POST /api/driver/trips/", new Limit(90, Duration.ofMinutes(10)));
+
     private static final int MAX_TRACKED_CLIENTS = 50_000;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -51,17 +60,32 @@ public class RateLimitFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         // Only the unauthenticated write routes are limited.
-        if (!"POST".equals(request.getMethod())) {
-            return true;
+        return limitFor(request.getMethod(), request.getRequestURI()) == null;
+    }
+
+    private Limit limitFor(String method, String uri) {
+        String key = method + " " + uri;
+        Limit exact = LIMITS.get(key);
+        if (exact != null) {
+            return exact;
         }
-        return !LIMITS.containsKey("POST " + request.getRequestURI());
+        for (Map.Entry<String, Limit> entry : PREFIX_LIMITS.entrySet()) {
+            if (key.startsWith(entry.getKey())) {
+                return entry.getValue();
+            }
+        }
+        return null;
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
+        Limit limit = limitFor(request.getMethod(), request.getRequestURI());
+        if (limit == null) {
+            chain.doFilter(request, response);
+            return;
+        }
         String key = clientIp(request) + "|" + request.getRequestURI();
-        Limit limit = LIMITS.get("POST " + request.getRequestURI());
         long now = System.currentTimeMillis();
         long windowStart = now - limit.window().toMillis();
 

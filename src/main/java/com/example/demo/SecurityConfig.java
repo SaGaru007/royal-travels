@@ -42,6 +42,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/auth/customer/signup", "/api/auth/customer/login").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/bookings", "/api/bookings/lookup").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/driver/trips/lookup").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/driver/trips/**").permitAll()
                 .requestMatchers(HttpMethod.PATCH, "/api/driver/trips/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/vehicles", "/api/vehicles/{id}").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/health").permitAll()

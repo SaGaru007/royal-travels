@@ -83,15 +83,21 @@ public class BookingService {
         if (req.paymentStatus() != null) b.setPaymentStatus(req.paymentStatus());
         if (req.tripStage() != null) b.setTripStage(req.tripStage());
         if (req.driverId() != null) {
-            if (req.driverId().isBlank()) {
-                b.setDriverId(null);
-            } else {
-                UUID driverId = UUID.fromString(req.driverId());
-                if (!drivers.existsById(driverId)) {
+            UUID nextDriver = null;
+            if (!req.driverId().isBlank()) {
+                nextDriver = UUID.fromString(req.driverId());
+                if (!drivers.existsById(nextDriver)) {
                     throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Driver not found");
                 }
-                b.setDriverId(driverId);
             }
+            if (!Objects.equals(nextDriver, b.getDriverId())) {
+                // A new driver (or none) must not inherit the previous driver's
+                // last known position: the customer would chase the wrong car.
+                b.setDriverLat(null);
+                b.setDriverLng(null);
+                b.setDriverLocationAt(null);
+            }
+            b.setDriverId(nextDriver);
         }
         return BookingResponse.from(repo.save(b));
     }

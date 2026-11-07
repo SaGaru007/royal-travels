@@ -50,6 +50,7 @@ Only these routes are unauthenticated. Everything else requires a token.
 | `GET` | `/api/vehicles/{id}` |
 | `POST` | `/api/driver/trips/lookup` |
 | `PATCH` | `/api/driver/trips/{id}/stage` |
+| `POST` | `/api/driver/trips/{id}/location` |
 | `GET` | `/swagger-ui.html`, `/swagger-ui/**`, `/v3/api-docs/**` |
 | `OPTIONS` | `/**` (CORS preflight) |
 
@@ -106,6 +107,7 @@ Fixed window, per client IP, applied to unauthenticated writes only:
 | `POST /api/bookings` | 20 | 10 minutes |
 | `POST /api/bookings/lookup` | 60 | 10 minutes |
 | `POST /api/driver/trips/lookup` | 60 | 10 minutes |
+| `POST /api/driver/trips/{id}/location` | 90 | 10 minutes |
 
 When exceeded:
 
@@ -158,6 +160,7 @@ The limiter is in-process and per instance. See
 | `POST` | `/api/admin/password` | OWNER/STAFF | 204 | Change password |
 | `POST` | `/api/driver/trips/lookup` | — | 200 | Trip sheet |
 | `PATCH` | `/api/driver/trips/{id}/stage` | — | 200 | Start/complete trip |
+| `POST` | `/api/driver/trips/{id}/location` | — | 204 | Report driver position |
 
 ---
 
@@ -371,7 +374,10 @@ service type and the business rules in
   "paymentStatus": "pending",
   "status": "new",
   "tripStage": "assigned",
-  "driverId": null
+  "driverId": null,
+  "driverLat": null,
+  "driverLng": null,
+  "driverLocationAt": null
 }
 ```
 
@@ -668,7 +674,36 @@ Effects:
 | 404 | Trip/driver/phone mismatch |
 | 409 | Trying to start a trip that is already completed |
 
-The customer's `/track` page picks up the change on its next 30-second refresh.
+The customer's `/track` page picks up the change on its next refresh (15 seconds while the trip is active).
+
+### 9.3 Share the driver's position
+
+`POST /api/driver/trips/{id}/location`
+
+```json
+{
+  "phone": "+919812345678",
+  "lat": 12.9716,
+  "lng": 77.5946
+}
+```
+
+Called by the trip sheet every 10 seconds while the driver has location sharing on.
+Coordinates are WGS84. The last report is returned to the customer as
+`driverLat`, `driverLng` and `driverLocationAt` on `BookingResponse`; clients
+treat a report older than 2 minutes as stale.
+
+| Status | When |
+|---|---|
+| 204 | Position stored |
+| 400 | Missing phone, or lat/lng outside valid ranges |
+| 404 | Trip/driver/phone mismatch |
+| 409 | Trip is not `started`, or is completed/cancelled |
+| 429 | More than 90 reports per 10 minutes |
+
+The report is rejected unless `tripStage` is `started`, so a driver cannot
+broadcast a position without first starting the trip. Reassigning a booking to
+a different driver clears the stored position.
 
 ---
 

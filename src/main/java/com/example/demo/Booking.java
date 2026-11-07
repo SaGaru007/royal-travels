@@ -49,6 +49,18 @@ public class Booking {
     @Column(name = "driver_id")
     private UUID driverId;
 
+    // Last position shared by the assigned driver (WGS84). Written only by the
+    // driver trip sheet; read by the phone-verified customer lookup. The
+    // columns predate this feature — they were reserved for live tracking.
+    @Column(name = "current_lat")
+    private Double driverLat;
+
+    @Column(name = "current_lng")
+    private Double driverLng;
+
+    @Column(name = "current_location_at")
+    private OffsetDateTime driverLocationAt;
+
     private String paymentStatus = "pending";
     private String status = "new";
     private String tripStage = "assigned";
@@ -121,6 +133,15 @@ public class Booking {
 
     public UUID getDriverId() { return driverId; }
     public void setDriverId(UUID driverId) { this.driverId = driverId; }
+
+    public Double getDriverLat() { return driverLat; }
+    public void setDriverLat(Double driverLat) { this.driverLat = driverLat; }
+
+    public Double getDriverLng() { return driverLng; }
+    public void setDriverLng(Double driverLng) { this.driverLng = driverLng; }
+
+    public OffsetDateTime getDriverLocationAt() { return driverLocationAt; }
+    public void setDriverLocationAt(OffsetDateTime driverLocationAt) { this.driverLocationAt = driverLocationAt; }
 
     public String getPaymentStatus() { return paymentStatus; }
     public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }

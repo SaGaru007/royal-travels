@@ -25,11 +25,11 @@ CI (`.github/workflows/ci.yml`) runs `./mvnw -B -DskipTests package` and the fro
 - Java package is `com.example.demo` even though Maven coordinates are `com.royaltravels:api`. Put new classes under `src/main/java/com/example/demo/`.
 - Entry point: `RoyalTravelsApplication`. Entities: `Booking`, `Vehicle`, `Driver`, `Customer`, `Admin`. API payloads are records under `dto/`; map entities with the static `from(...)` helpers rather than exposing entities.
 - Business logic lives in `service/` (`BookingService`, `VehicleService`, `DriverService`, `CustomerService`, `AuthService`). Controllers stay thin.
-- Abuse protection: `RateLimitFilter` throttles `POST /api/auth/login` (10/5min), `POST /api/auth/customer/login` (10/5min), `POST /api/auth/customer/signup` (5/hour), `POST /api/bookings` (20/10min), `POST /api/bookings/lookup` (60/10min) and `POST /api/driver/trips/lookup` (60/10min) per client IP with `429` + `Retry-After`.
+- Abuse protection: `RateLimitFilter` throttles `POST /api/auth/login` (10/5min), `POST /api/auth/customer/login` (10/5min), `POST /api/auth/customer/signup` (5/hour), `POST /api/bookings` (20/10min), `POST /api/bookings/lookup` (60/10min), `POST /api/driver/trips/lookup` (60/10min) and `POST /api/driver/trips/*/location` (90/10min) per client IP with `429` + `Retry-After`.
 - `VehicleService.listPublic()` serves a 60-second in-process TTL snapshot; admin writes evict it. Public `GET /api/vehicles` also sets `Cache-Control: max-age=60`.
 - Performance indexes (trigram GIN for search, composite for list sort) live in `db/indexes.sql` and must be applied manually, like all schema changes.
 - API roots:
-  - Public: `/api/health`, `/api/auth/login`, `/api/auth/customer/signup`, `/api/auth/customer/login`, `/api/bookings` (POST), `/api/bookings/lookup` (POST), `/api/vehicles`, `/api/driver/trips/lookup` (POST), `/api/driver/trips/{id}/stage` (PATCH).
+  - Public: `/api/health`, `/api/auth/login`, `/api/auth/customer/signup`, `/api/auth/customer/login`, `/api/bookings` (POST), `/api/bookings/lookup` (POST), `/api/vehicles`, `/api/driver/trips/lookup` (POST), `/api/driver/trips/{id}/stage` (PATCH), `/api/driver/trips/{id}/location` (POST).
   - Customer: `/api/customer/me`, `/api/customer/bookings` (GET, `ROLE_CUSTOMER`).
   - Admin: `/api/bookings` (GET), `/api/bookings/{id}` (GET/PATCH), `/api/admin/vehicles` (CRUD), `/api/admin/drivers` (CRUD), `/api/admin/password` (POST).
 - Booking PATCH accepts only `status`, `paymentStatus`, `tripStage`, and `driverId` (empty string unassigns). The allowed values are enforced by `BookingUpdateRequest` patterns (and mirrored in `BookingService`). Extend both when adding values.

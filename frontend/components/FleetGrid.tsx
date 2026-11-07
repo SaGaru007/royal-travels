@@ -18,9 +18,14 @@ function groupFor(category: string) {
   return "Other";
 }
 
-export default function FleetGrid() {
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function FleetGrid({
+  initialVehicles,
+}: {
+  /** Rendered on the server so the cards ship with the HTML. */
+  initialVehicles?: Vehicle[];
+}) {
+  const [vehicles, setVehicles] = useState<Vehicle[]>(initialVehicles ?? []);
+  const [loading, setLoading] = useState(initialVehicles === undefined);
   const [error, setError] = useState<string | null>(null);
   const [activeGroup, setActiveGroup] = useState("All");
   const [capacity, setCapacity] = useState("any");
@@ -42,6 +47,8 @@ export default function FleetGrid() {
   }
 
   useEffect(() => {
+    // The server already embedded the catalogue; only fetch when it could not.
+    if (initialVehicles !== undefined) return;
     load();
   }, []);
 

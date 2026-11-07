@@ -295,3 +295,4 @@ constraint will be operations (one person supporting the platform), not compute.
 - [ADR 0005 — WhatsApp click-to-chat](adr/0005-whatsapp-click-to-chat.md)
 - [ADR 0006 — Free-tier hosting](adr/0006-free-tier-hosting.md)
 - [ADR 0007 — Single-instance cache and limiter](adr/0007-single-instance-cache-and-limiter.md)
+- [ADR 0008 — Browser-based live driver location](adr/0008-live-driver-location.md)

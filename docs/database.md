@@ -123,8 +123,9 @@ The core operational table. One row per booking request.
 | `advance_amount` | `numeric` | yes | — | Server-owned |
 | `vehicle_id` | `uuid` | yes | — | FK to `vehicles`; unused by the app today |
 | `driver_id` | `uuid` | yes | — | FK to `drivers`; assigned by dispatch |
-| `current_lat` | `numeric` | yes | — | Reserved for live GPS |
-| `current_lng` | `numeric` | yes | — | Reserved for live GPS |
+| `current_lat` | `double precision` | yes | — | Last latitude shared by the assigned driver (WGS84) |
+| `current_lng` | `double precision` | yes | — | Last longitude shared by the assigned driver (WGS84) |
+| `current_location_at` | `timestamptz` | yes | — | When the position above was last written |
 | `trip_stage` | `text` | yes | `'assigned'` | `assigned`, `started`, `completed` |
 | `payment_status` | `text` | no | `'pending'` | `pending`, `paid` |
 | `status` | `text` | no | `'new'` | `new`, `contacted`, `confirmed`, `completed`, `cancelled` |
@@ -316,6 +317,7 @@ renders as blank.
 | [`db/seed_vehicles.sql`](../db/seed_vehicles.sql) | Six demo vehicles, idempotent by plate number | Yes; inserts only missing plates |
 | [`db/demo_bookings.sql`](../db/demo_bookings.sql) | Seven fixed-UUID demo bookings for dashboards | **No** — demo environments only |
 | [`db/customers.sql`](../db/customers.sql) | `customers` table and indexes | Yes, `IF NOT EXISTS` |
+| [`db/live_tracking.sql`](../db/live_tracking.sql) | `bookings.current_location_at` for live tracking | Yes, `IF NOT EXISTS` |
 | [`db/indexes.sql`](../db/indexes.sql) | Performance indexes | Yes, `IF NOT EXISTS` |
 | [`scripts/cleanup-test-data.sql`](../scripts/cleanup-test-data.sql) | Removes rows created by the E2E suite | Yes, scoped to known test values |
 

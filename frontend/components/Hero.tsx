@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 
 // Hero background image — used as the video's poster frame, and as the
@@ -21,10 +22,15 @@ export default function Hero() {
   return (
     <section className="relative overflow-hidden">
       <div className="absolute inset-0">
-        <img
+        {/* priority: this is the LCP element, so it must not wait behind
+            hydration. next/image also serves AVIF/WebP at the right width. */}
+        <Image
           src={HERO_IMAGE}
           alt="Chauffeured car winding through a scenic mountain road"
-          className="absolute inset-0 w-full h-full object-cover"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover"
         />
         <video
           className="hero-video absolute inset-0 w-full h-full object-cover motion-reduce:hidden"
@@ -32,6 +38,7 @@ export default function Hero() {
           muted
           loop
           playsInline
+          preload="none"
           poster={HERO_IMAGE}
           onError={(e) => {
             // No video file yet (or it failed to load) — hide the <video>
