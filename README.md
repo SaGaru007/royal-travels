@@ -334,14 +334,15 @@ verification, keep-alive, custom domains, rollback, and troubleshooting — is i
 **[docs/deployment.md](docs/deployment.md)**. A short quickstart is in
 [DEPLOYMENT.md](DEPLOYMENT.md).
 
-**Live URLs:** production URLs are environment-specific and are recorded here
-after the first deployment. The runbook is complete; the providers are not yet
-provisioned for this repository.
+**Live URLs:** this repository is deployed on the free-tier stack below.
 
 | Environment | Frontend | API |
 |---|---|---|
 | Local | `http://localhost:3000` | `http://localhost:8081` |
-| Production | `<your-project>.vercel.app` | `<your-service>.onrender.com` |
+| Production | <https://royal-travels-plum.vercel.app> | <https://royal-travels-api.onrender.com> |
+
+Admin console: <https://royal-travels-plum.vercel.app/admin/login> ·
+API health: <https://royal-travels-api.onrender.com/api/health>
 
 Zero-cost pilot stack: Supabase Free + Render Free (Docker) + Vercel Hobby.
 Free-tier caveats and the paid upgrade path are documented in
