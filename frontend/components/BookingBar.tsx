@@ -1,8 +1,8 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ApiError, BookingCreate, createBooking } from "@/lib/api";
+import { ApiError, BookingCreate, createBooking, warmUpApi } from "@/lib/api";
 import { saveLastBooking } from "@/lib/bookingSession";
 
 const tabs = [
@@ -19,12 +19,27 @@ export default function BookingBar() {
   const [active, setActive] = useState<TabId>("airport");
   const [tripType, setTripType] = useState("one-way");
   const [submitting, setSubmitting] = useState(false);
+  const [waking, setWaking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // React state updates are async, so a fast double-click can fire two
+  // submits before the button disables. The second one hits the API's
+  // 10-minute duplicate guard and surfaces a confusing 409.
+  const inFlight = useRef(false);
+
+  // Wake the API while the visitor is filling the form, so the submit itself
+  // does not pay the free-tier cold start.
+  useEffect(() => {
+    void warmUpApi();
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (inFlight.current) return;
+    inFlight.current = true;
     setError(null);
     setSubmitting(true);
+
+    const wakeTimer = setTimeout(() => setWaking(true), 2500);
 
     const data = new FormData(event.currentTarget);
     const value = (name: string) => String(data.get(name) ?? "").trim();
@@ -78,7 +93,19 @@ export default function BookingBar() {
         setError("Could not submit the booking. Please try again.");
       }
       setSubmitting(false);
+    } finally {
+      clearTimeout(wakeTimer);
+      inFlight.current = false;
+      setWaking(false);
     }
+  }
+
+  // Native validation stops the submit event entirely, so a phone number the
+  // browser rejects would otherwise look like a button that does nothing.
+  function handleInvalid() {
+    setError(
+      "Please check the highlighted fields above — the booking has not been sent yet."
+    );
   }
 
   return (
@@ -105,7 +132,12 @@ export default function BookingBar() {
           ))}
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6">
+        <form
+          onSubmit={handleSubmit}
+          onInvalid={handleInvalid}
+          onInput={() => setError(null)}
+          className="p-6"
+        >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <Field label="Full name">
               <input name="name" required className="field-input" placeholder="Your name" autoComplete="name" />
@@ -118,7 +150,7 @@ export default function BookingBar() {
                 pattern="^\+?[0-9]{10,15}$"
                 title="Enter 10-15 digits, optionally starting with +"
                 className="field-input"
-                placeholder="+91 98765 43210"
+                placeholder="+91 90000 00000"
                 autoComplete="tel"
               />
             </Field>
@@ -248,7 +280,9 @@ export default function BookingBar() {
           <div className="mt-5 flex flex-col sm:flex-row sm:items-center gap-3">
             <button type="submit" disabled={submitting} className="btn-gold h-[46px] disabled:opacity-60">
               {submitting
-                ? "Submitting..."
+                ? waking
+                  ? "Waking the server…"
+                  : "Submitting…"
                 : active === "callback"
                 ? "Request Callback ➤"
                 : active === "airport"
@@ -258,7 +292,9 @@ export default function BookingBar() {
                 : "Book Outstation Ride ➤"}
             </button>
             <p className="text-xs text-muted">
-              Fare confirmed by our concierge. No payment is taken online.
+              {waking
+                ? "Free hosting sleeps when idle — the first request can take up to a minute. Please keep this tab open."
+                : "Fare confirmed by our concierge. No payment is taken online."}
             </p>
           </div>
         </form>
@@ -284,7 +320,11 @@ export default function BookingBar() {
 }
 
 function today() {
-  return new Date().toISOString().slice(0, 10);
+  // toISOString() is UTC; in India that flips the date back for the first
+  // 5.5 hours of the day, which lets "today" look like the past to the API.
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 10);
 }
 
 // Half-hour slots rendered in 12-hour form; the form value stays 24-hour

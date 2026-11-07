@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ApiError, login } from "@/lib/api";
+import { ApiError, login, warmUpApi } from "@/lib/api";
 import { getAdminSession, saveAdminSession } from "@/lib/auth";
 
 export default function AdminLoginPage() {
@@ -16,6 +16,8 @@ export default function AdminLoginPage() {
     if (getAdminSession()) {
       router.replace("/admin/bookings");
     }
+    // Wake the API while the admin types their credentials.
+    void warmUpApi();
   }, [router]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {

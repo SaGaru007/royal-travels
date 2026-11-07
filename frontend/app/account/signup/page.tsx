@@ -93,7 +93,7 @@ export default function CustomerSignupPage() {
                 onChange={(event) => update("name", event.target.value)}
                 autoComplete="name"
                 className={inputClass}
-                placeholder="Sagar Hadapad"
+                placeholder="John Doe"
               />
               {fieldErrors.name && <span className="text-xs text-red-700">{fieldErrors.name}</span>}
             </label>
@@ -120,7 +120,7 @@ export default function CustomerSignupPage() {
                 onChange={(event) => update("phone", event.target.value)}
                 autoComplete="tel"
                 className={inputClass}
-                placeholder="9876543210"
+                placeholder="9000000000"
               />
               {fieldErrors.phone && <span className="text-xs text-red-700">{fieldErrors.phone}</span>}
             </label>

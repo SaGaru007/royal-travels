@@ -24,6 +24,7 @@ export default function FleetGrid() {
   const [error, setError] = useState<string | null>(null);
   const [activeGroup, setActiveGroup] = useState("All");
   const [capacity, setCapacity] = useState("any");
+  const [slow, setSlow] = useState(false);
 
   function load() {
     setLoading(true);
@@ -43,6 +44,17 @@ export default function FleetGrid() {
   useEffect(() => {
     load();
   }, []);
+
+  // Free hosting sleeps when idle; after a few seconds say so instead of
+  // leaving the visitor staring at a skeleton screen that looks broken.
+  useEffect(() => {
+    if (!loading) {
+      setSlow(false);
+      return;
+    }
+    const timer = setTimeout(() => setSlow(true), 5000);
+    return () => clearTimeout(timer);
+  }, [loading]);
 
   const groups = useMemo(() => {
     const counts = new Map<string, number>();
@@ -86,21 +98,29 @@ export default function FleetGrid() {
 
       <div className="max-w-content mx-auto container-px pb-6">
         {loading && (
-          <div className="grid md:grid-cols-3 gap-6">
-            {[0, 1, 2].map((index) => (
-              <div
-                key={index}
-                className="bg-white border border-line rounded-xl overflow-hidden animate-pulse"
-              >
-                <div className="h-44 bg-sage" />
-                <div className="p-6 space-y-3">
-                  <div className="h-4 bg-sage rounded w-2/3" />
-                  <div className="h-3 bg-sage/70 rounded w-1/2" />
-                  <div className="h-20 bg-sage/50 rounded" />
+          <>
+            <div className="grid md:grid-cols-3 gap-6">
+              {[0, 1, 2].map((index) => (
+                <div
+                  key={index}
+                  className="bg-white border border-line rounded-xl overflow-hidden animate-pulse"
+                >
+                  <div className="h-44 bg-sage" />
+                  <div className="p-6 space-y-3">
+                    <div className="h-4 bg-sage rounded w-2/3" />
+                    <div className="h-3 bg-sage/70 rounded w-1/2" />
+                    <div className="h-20 bg-sage/50 rounded" />
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+            {slow && (
+              <p className="text-center text-xs text-muted mt-4" role="status">
+                Still loading — the server is waking up after being idle. This
+                can take up to a minute; the page will fill in automatically.
+              </p>
+            )}
+          </>
         )}
 
         {!loading && error && (

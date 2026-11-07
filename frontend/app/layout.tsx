@@ -15,6 +15,10 @@ const serif = Fraunces({
   style: ["normal", "italic"],
 });
 
+const API_ORIGIN = (
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8081"
+).replace(/\/$/, "");
+
 export const metadata: Metadata = {
   title: "Royal Travels | Luxury Chauffeur Service",
   description:
@@ -28,6 +32,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        {/* Open the TLS connection to the API while the page is still
+            rendering, so the first data call does not pay for it. */}
+        <link rel="preconnect" href={API_ORIGIN} crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href={API_ORIGIN} />
+      </head>
       <body className={`${sans.variable} ${serif.variable} font-sans`}>
         {children}
       </body>

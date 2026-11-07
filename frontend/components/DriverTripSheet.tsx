@@ -123,7 +123,7 @@ export default function DriverTripSheet() {
                 required
                 type="tel"
                 autoComplete="tel"
-                placeholder="+91 98765 43210"
+                placeholder="+91 90000 00000"
                 className="w-full rounded-md border border-line bg-cream px-3 py-2.5 text-sm"
               />
             </label>

@@ -261,7 +261,7 @@ export default function DriversPage() {
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   className={inputClass}
-                  placeholder="Ramesh Kumar"
+                  placeholder="John Doe"
                 />
               </Field>
               <Field label="WhatsApp number">
@@ -271,7 +271,7 @@ export default function DriversPage() {
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
                   className={inputClass}
-                  placeholder="+91 98765 43210"
+                  placeholder="+91 90000 00000"
                 />
               </Field>
               <Field label="Assigned vehicle">

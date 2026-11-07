@@ -166,6 +166,51 @@ export const API_BASE_URL = (
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8081"
 ).replace(/\/$/, "");
 
+const REQUEST_TIMEOUT_MS = 25_000;
+
+/**
+ * The API sleeps when idle on free hosting, so the first call after a quiet
+ * period can take 30-90 s. Firing this when a page mounts means the visitor's
+ * real request usually finds the instance already awake.
+ */
+export async function warmUpApi() {
+  const controller = new AbortController();
+  // A cold start can legitimately take a minute; give up after that so the
+  // browser is not left holding an open request forever.
+  const timer = setTimeout(() => controller.abort(), 60_000);
+  try {
+    await fetch(`${API_BASE_URL}/api/health`, {
+      cache: "no-store",
+      signal: controller.signal,
+    });
+  } catch {
+    // Best effort only: a failed warm-up must never block the UI.
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function describeNetworkFailure(error: unknown) {
+  if (error instanceof DOMException && error.name === "AbortError") {
+    return "The server took too long to answer. It may still be waking up — please try again in a moment.";
+  }
+  return (
+    `Could not reach the API at ${API_BASE_URL}. ` +
+    "Check your connection and try again. The server may also be starting up " +
+    "(free hosting sleeps after 15 minutes of inactivity)."
+  );
+}
+
+async function fetchWithTimeout(url: string, init: RequestInit) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function request<T>(
   path: string,
   options: RequestInit = {},
@@ -180,18 +225,31 @@ async function request<T>(
     headers.set("Authorization", `Bearer ${token}`);
   }
 
+  const method = (options.method ?? "GET").toUpperCase();
+  // Only reads are retried; retrying a POST could create a duplicate booking.
+  const idempotent = method === "GET" || method === "HEAD";
+  const url = `${API_BASE_URL}${path}`;
+
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetchWithTimeout(url, {
       ...options,
       headers,
       cache: "no-store",
     });
-  } catch {
-    throw new ApiError(
-      0,
-      `Cannot reach the Royal Travels API at ${API_BASE_URL}. Is the backend running?`
-    );
+  } catch (firstError) {
+    if (!idempotent) {
+      throw new ApiError(0, describeNetworkFailure(firstError));
+    }
+    try {
+      response = await fetchWithTimeout(url, {
+        ...options,
+        headers,
+        cache: "no-store",
+      });
+    } catch (secondError) {
+      throw new ApiError(0, describeNetworkFailure(secondError));
+    }
   }
 
   if (response.status === 204) {
@@ -212,11 +270,19 @@ async function request<T>(
     const problem = data as
       | { detail?: string; message?: string; errors?: Record<string, string> }
       | null;
-    throw new ApiError(
-      response.status,
-      problem?.detail ?? problem?.message ?? response.statusText ?? "Request failed",
-      problem?.errors
-    );
+
+    let message =
+      problem?.detail ?? problem?.message ?? response.statusText ?? "Request failed";
+
+    // A CORS rejection has no JSON body, so Spring's "Forbidden" is all the
+    // client sees. Translate it into something actionable instead of letting
+    // the visitor believe the whole site is down.
+    if (response.status === 403 && !problem?.detail) {
+      message =
+        "The API refused this request (403). If the site was just deployed, this domain is probably not on the API's allowed-origin list yet.";
+    }
+
+    throw new ApiError(response.status, message, problem?.errors);
   }
 
   return data as T;
