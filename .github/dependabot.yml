@@ -1,38 +1,82 @@
 version: 2
 
+# Dependency PRs are grouped and major versions are ignored on purpose.
+#
+# Ungrouped Dependabot produced 16 simultaneous PRs, several of which were
+# breaking majors (React 18 -> 19, Tailwind 3 -> 4, TypeScript 5 -> 7, JDK 21 ->
+# 25). Those need a deliberate migration and a green build, not a one-click
+# merge, so they are excluded here and handled by hand. Routine minor and patch
+# updates arrive as one grouped PR per ecosystem.
+
 updates:
   - package-ecosystem: maven
     directory: "/"
     schedule:
       interval: weekly
       day: monday
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 2
     labels:
       - dependencies
       - backend
+    groups:
+      maven-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
 
   - package-ecosystem: npm
     directory: "/frontend"
     schedule:
       interval: weekly
       day: monday
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 2
     labels:
       - dependencies
       - frontend
+    groups:
+      npm-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
 
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
       interval: monthly
+    open-pull-requests-limit: 1
     labels:
       - dependencies
       - ci
+    groups:
+      actions-minor-patch:
+        patterns:
+          - "*"
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
 
   - package-ecosystem: docker
     directory: "/"
     schedule:
       interval: monthly
+    open-pull-requests-limit: 1
     labels:
       - dependencies
       - docker
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major

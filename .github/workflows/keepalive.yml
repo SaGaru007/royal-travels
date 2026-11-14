@@ -1,8 +1,13 @@
 name: API keep-alive
 
 # Render's free tier sleeps after ~15 idle minutes, turning the next visitor's
-# first request into a 30-90 second wait. A ping every 10 minutes keeps the
+# first request into a 30-120 second wait. A ping every 10 minutes keeps the
 # instance (and the Supabase project behind it) awake.
+#
+# The ping retries because the first request against a sleeping instance is
+# expected to hang until Render finishes booting the JVM. A single 120-second
+# attempt used to time out and mark the run as failed, so the retry loop treats
+# "still booting" as normal and only fails once every attempt has been spent.
 #
 # Caveats:
 #   - GitHub schedules are best-effort and can run several minutes late.
@@ -24,9 +29,21 @@ permissions:
 jobs:
   ping:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 15
     steps:
       - name: Ping the health endpoint
         run: |
-          curl --silent --show-error --fail --max-time 120 \
-            https://royal-travels-api.onrender.com/api/health
+          url="https://royal-travels-api.onrender.com/api/health"
+          for attempt in 1 2 3 4; do
+            code=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+              --max-time 180 "$url" || echo "000")
+            echo "attempt ${attempt}: HTTP ${code}"
+            if [ "$code" = "200" ]; then
+              echo "API is awake and healthy."
+              exit 0
+            fi
+            # 502/503/000 mean the instance is still booting, so wait it out.
+            sleep 20
+          done
+          echo "::error::Health check never returned 200 after 4 attempts."
+          exit 1
