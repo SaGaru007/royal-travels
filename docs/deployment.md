@@ -339,7 +339,14 @@ A usable template lives at [`.env.example`](../.env.example).
 
 | Variable | Required | Notes |
 |---|---|---|
-| `NEXT_PUBLIC_API_BASE_URL` | yes | API origin, no trailing slash; baked at build time |
+| `NEXT_PUBLIC_API_BASE_URL` | yes | API origin, no trailing slash; baked at build time. The build fails on Vercel if it is missing. |
+| `NEXT_PUBLIC_CONTACT_PHONE` | no | Overrides the dispatch number used in links, WhatsApp and footers. Defaults to the live number in `frontend/lib/site.ts`. |
+| `NEXT_PUBLIC_CONTACT_EMAIL` | no | Overrides the bookings email. |
+| `NEXT_PUBLIC_BUSINESS_ADDRESS` | no | Street address. When empty the address is omitted from the footer instead of showing a placeholder. |
+| `NEXT_PUBLIC_BUSINESS_HOURS` | no | Opening hours. Omitted when empty, for the same reason. |
+
+Contact details live in `frontend/lib/site.ts`; change the defaults there rather
+than in individual components.
 
 ---
 

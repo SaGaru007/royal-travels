@@ -1,21 +1,40 @@
+import Link from "next/link";
+import { SITE } from "@/lib/site";
+
 const items = [
-  { icon: "🛂", title: "All-India Permit & FASTag", body: "Interstate commercial licensing and seamless electronic toll transit with pre-loaded accounts. Zero border delays." },
-  { icon: "📡", title: "24/7 Monitored GPS & SOS", body: "Dual-SIM telemetry monitored live from our Central Command Dispatch Center with emergency panic response." },
-  { icon: "🎩", title: "Master Chauffeurs", body: "Police-verified, highway-certified, discreet and immaculately uniformed professionals trained in defensive driving." },
-  { icon: "🧴", title: "Complimentary Amenity Kit", body: "Chilled Himalayan mineral water, packaged refreshing facial wet wipes, sanitizer, and umbrellas onboard." },
+  {
+    icon: "🚗",
+    title: "Chauffeur on every booking",
+    body: "Self-drive is not offered. Each trip is assigned to a driver from our roster, so you can work or rest on the way.",
+  },
+  {
+    icon: "📍",
+    title: "Live trip tracking",
+    body: "When the driver starts your trip, they can share their position from the trip sheet and you can follow it on the tracking page.",
+  },
+  {
+    icon: "🪪",
+    title: "Driver records on file",
+    body: "Every chauffeur has a phone number and licence status recorded with dispatch before they are assigned a trip.",
+  },
+  {
+    icon: "📞",
+    title: "One number for everything",
+    body: "Booking, changes and on-trip help all go through the dispatch line. No ticket queues, no chatbots.",
+  },
 ];
 
 export default function FleetInclusions() {
   return (
     <section className="bg-sage/60 py-20">
       <div className="max-w-content mx-auto container-px">
-        <p className="eyebrow">The Royal Travels Guarantee</p>
+        <p className="eyebrow">How we operate</p>
         <h2 className="mt-3 text-3xl font-bold text-ink max-w-lg">
-          Standard inclusions across every Royal Travels vehicle
+          What you can expect on every Royal Travels trip
         </h2>
         <p className="mt-3 text-sm text-muted max-w-xl">
-          Regardless of the car category you select, each journey is elevated
-          by our uncompromising white-glove operating benchmark.
+          No promises about things we cannot verify. This is how the service
+          actually works, from the first call to the drop-off.
         </p>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-10">
@@ -29,6 +48,18 @@ export default function FleetInclusions() {
             </div>
           ))}
         </div>
+
+        <p className="text-xs text-muted mt-8">
+          Questions before booking? Call{" "}
+          <a href={SITE.telHref} className="text-ink underline underline-offset-2">
+            {SITE.phoneDisplay}
+          </a>{" "}
+          or{" "}
+          <Link href="/#booking" className="text-ink underline underline-offset-2">
+            send a request
+          </Link>
+          .
+        </p>
       </div>
     </section>
   );

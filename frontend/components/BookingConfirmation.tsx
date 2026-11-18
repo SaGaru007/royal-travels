@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ApiError, Booking, lookupBooking } from "@/lib/api";
+import { ApiError, Booking, bookingLookup, lookupBooking } from "@/lib/api";
 import { getLastBooking } from "@/lib/bookingSession";
 import {
   formatDate,
@@ -11,8 +11,8 @@ import {
   formatMoney,
   formatTime,
   shortReference,
-  whatsappLink,
 } from "@/lib/format";
+import { SITE, whatsappLink } from "@/lib/site";
 
 const SERVICE_LABELS: Record<string, string> = {
   outstation: "Outstation Journey",
@@ -35,6 +35,9 @@ export default function BookingConfirmation() {
 
   const [booking, setBooking] = useState<Booking | null>(null);
   const [checking, setChecking] = useState(true);
+  const [reference, setReference] = useState(
+    bookingId ? shortReference(bookingId) : ""
+  );
   const [phone, setPhone] = useState("");
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [lookingUp, setLookingUp] = useState(false);
@@ -53,7 +56,7 @@ export default function BookingConfirmation() {
     setLookupError(null);
     setLookingUp(true);
     try {
-      const found = await lookupBooking(bookingId, phone);
+      const found = await lookupBooking(bookingLookup(bookingId, reference, phone));
       setBooking(found);
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
@@ -115,10 +118,13 @@ export default function BookingConfirmation() {
                 Booking reference
               </span>
               <input
-                value={bookingId ? shortReference(bookingId) : ""}
-                readOnly
-                className="w-full rounded-md border border-line bg-sage/40 px-3 py-2.5 text-sm font-mono text-ink"
-                placeholder="Open this page from your confirmation link"
+                value={reference}
+                onChange={(event) => setReference(event.target.value)}
+                required
+                className="w-full rounded-md border border-line bg-cream px-3 py-2.5 text-sm font-mono text-ink uppercase placeholder:normal-case"
+                placeholder="RT-1A2B3C4D"
+                autoCapitalize="characters"
+                autoComplete="off"
               />
             </label>
             <label className="block">
@@ -141,7 +147,7 @@ export default function BookingConfirmation() {
             )}
             <button
               type="submit"
-              disabled={lookingUp || !bookingId}
+              disabled={lookingUp || !reference.trim() || !phone.trim()}
               className="btn-primary w-full disabled:opacity-60"
             >
               {lookingUp ? "Checking…" : "View reservation"}
@@ -159,7 +165,7 @@ export default function BookingConfirmation() {
     );
   }
 
-  const reference = shortReference(booking.id);
+  const bookingReference = shortReference(booking.id);
   const statusClass = STATUS_STYLES[booking.status] ?? STATUS_STYLES.new;
   const fare =
     booking.totalFare ??
@@ -171,10 +177,10 @@ export default function BookingConfirmation() {
       <div className="flex flex-wrap items-center justify-between gap-3 bg-white border border-line rounded-lg px-5 py-3 text-xs">
         <span className="text-ink/80">
           <span className="text-goldDeep font-medium">●</span> Reservation
-          received <span className="text-muted">| Reference: {reference}</span>
+          received <span className="text-muted">| Reference: {bookingReference}</span>
         </span>
         <span className="text-ink/70">
-          📞 Priority Concierge Desk: <b>+91 99867 80221</b>
+          📞 Priority Concierge Desk: <b>{SITE.phoneDisplay}</b>
         </span>
       </div>
 
@@ -198,12 +204,12 @@ export default function BookingConfirmation() {
           </span>
           <div>
             <p className="text-sm font-semibold text-ink">
-              Concierge callback within 15 minutes
+              A concierge will call to confirm
             </p>
             <p className="text-xs text-muted mt-1 leading-relaxed">
               We will confirm your itinerary on{" "}
               <b className="text-ink">{booking.phone}</b>. Keep this reference
-              handy: <b className="text-ink">{reference}</b>.
+              handy: <b className="text-ink">{bookingReference}</b>.
             </p>
           </div>
         </div>
@@ -217,7 +223,7 @@ export default function BookingConfirmation() {
                 <p className="text-[11px] uppercase tracking-wide text-goldDeep">
                   Your reservation
                 </p>
-                <p className="text-lg font-bold text-ink">{reference}</p>
+                <p className="text-lg font-bold text-ink">{bookingReference}</p>
               </div>
               <div className="flex items-center gap-2">
                 <span className={`text-[11px] font-medium border rounded-full px-2.5 py-1 ${statusClass}`}>
@@ -332,9 +338,9 @@ export default function BookingConfirmation() {
               Need an update?
             </h2>
             <p className="text-xs text-muted mb-4 leading-relaxed">
-              View the current status of this reservation. Live driver GPS is
-              not enabled yet; status updates appear as our team confirms your
-              trip.
+              View the current status of this reservation. Once your driver
+              starts the trip, the position they share from their trip sheet
+              appears on the tracking page.
             </p>
             <Link
               href={`/track?id=${booking.id}`}
@@ -346,7 +352,7 @@ export default function BookingConfirmation() {
 
           <div className="bg-white border border-line rounded-xl p-6">
             <p className="text-[11px] uppercase tracking-wide text-goldDeep mb-1">
-              24x7 Royal Concierge
+              Concierge support
             </p>
             <h3 className="font-semibold text-ink mb-2">
               Need itinerary changes?
@@ -358,7 +364,7 @@ export default function BookingConfirmation() {
             <div className="space-y-2">
               <a
                 href={whatsappLink(
-                  `Hello Royal Travels, I need help with booking ${reference} (${booking.name}).`
+                  `Hello Royal Travels, I need help with booking ${bookingReference} (${booking.name}).`
                 )}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -367,10 +373,10 @@ export default function BookingConfirmation() {
                 💬 Chat on WhatsApp
               </a>
               <a
-                href="tel:+919986780221"
+                href={SITE.telHref}
                 className="btn-secondary w-full text-xs py-2.5"
               >
-                📞 Call +91 99867 80221
+                📞 Call {SITE.phoneDisplay}
               </a>
             </div>
           </div>

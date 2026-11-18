@@ -17,6 +17,20 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
 
     boolean existsByDriverId(UUID driverId);
 
+    /**
+     * Resolves the short reference shown to customers (the first characters of
+     * the UUID, optionally prefixed with RT-) without exposing a listing. The
+     * caller still has to prove the phone number, so a guessed prefix reveals
+     * nothing. A small limit keeps a pathological prefix from scanning.
+     */
+    @Query(value = """
+            select * from bookings
+            where cast(id as text) like :prefix
+            order by created_at desc
+            limit 5
+            """, nativeQuery = true)
+    List<Booking> findByReferencePrefix(@Param("prefix") String prefix);
+
     // Params are always passed as non-null strings (empty string means "no
     // filter"). Using `:q is null` here makes PostgreSQL infer the null bind
     // parameter as bytea, which breaks lower().

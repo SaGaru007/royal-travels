@@ -60,7 +60,7 @@ export default function FleetFilters({
             <option value="large">8+ van / coach</option>
           </select>
           <span className="text-xs text-muted whitespace-nowrap">
-            Showing {shown} of {total} verified vehicles
+            Showing {shown} of {total} vehicles
           </span>
         </div>
       </div>

@@ -4,26 +4,26 @@ const cards = [
   {
     icon: "🗺",
     title: "Outstation Travel",
-    body: "Comfortable, long-distance journeys across states with seasoned drivers, toll-inclusive transparency, and flexible wayside halts.",
+    body: "Long-distance journeys with a chauffeur, planned around your stops. Tell dispatch where you want to pause and it goes into the itinerary.",
     cta: "Book Outstation Route",
   },
   {
     icon: "🏢",
     title: "Local Rental",
-    body: "Flexible half-day (4h/40km) and full-day (8h/80km) packages for executive meetings, city tours, and family errands.",
+    body: "Half-day (4h/40km) and full-day (8h/80km) packages for meetings, city errands and family runs.",
     cta: "Book Local Cab",
   },
   {
     icon: "✈",
     title: "Airport Transfers",
-    body: "Punctual and hassle-free pickup and drop services with flight tracking and terminal meet-and-greet assistance.",
+    body: "Terminal pickup and drop. Add your flight number when booking so dispatch can plan the timing around it.",
     cta: "Schedule Airport Ride",
   },
   {
     icon: "🧭",
-    title: "Customized Tours",
-    body: "Bespoke itineraries covering India's heritage circuits, hill stations, and pilgrimage sanctuaries with seasoned guides.",
-    cta: "Plan Tour with Concierge",
+    title: "Customised Trips",
+    body: "Multi-day and multi-stop itineraries: heritage circuits, hill stations or a family route. Dispatch quotes the whole plan.",
+    cta: "Plan a Trip with the Concierge",
   },
 ];
 

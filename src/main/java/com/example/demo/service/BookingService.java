@@ -6,6 +6,7 @@ import com.example.demo.DriverRepository;
 import com.example.demo.dto.BookingRequest;
 import com.example.demo.dto.BookingResponse;
 import com.example.demo.dto.BookingUpdateRequest;
+import com.example.demo.dto.LookupRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -61,19 +62,29 @@ public class BookingService {
     }
 
     /**
-     * Public confirmation lookup. The booking UUID alone is not enough: the
+     * Public confirmation lookup. The reference alone is not enough: the
      * customer must also supply the phone number used on the booking.
      */
     @Transactional(readOnly = true)
-    public BookingResponse lookup(UUID id, String phone) {
-        Booking b = find(id);
-        String stored = digits(b.getPhone());
-        String supplied = digits(phone);
-        if (supplied.length() < 10 || (!stored.endsWith(supplied) && !supplied.endsWith(stored))) {
-            // Same response for a wrong phone and a missing booking.
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found");
+    public BookingResponse lookup(LookupRequest req) {
+        return BookingResponse.from(resolveForCustomer(req.id(), req.reference(), req.phone()));
+    }
+
+    private Booking resolveForCustomer(UUID id, String reference, String phone) {
+        if (id != null) {
+            Booking booking = find(id);
+            if (!BookingReference.phoneMatches(booking.getPhone(), phone)) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found");
+            }
+            return booking;
         }
-        return BookingResponse.from(b);
+        for (Booking candidate : repo.findByReferencePrefix(BookingReference.prefix(reference))) {
+            if (BookingReference.phoneMatches(candidate.getPhone(), phone)) {
+                return candidate;
+            }
+        }
+        // Same response for a wrong phone and an unknown reference.
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found");
     }
 
     @Transactional

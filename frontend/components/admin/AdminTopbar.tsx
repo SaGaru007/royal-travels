@@ -1,3 +1,5 @@
+import { SITE } from "@/lib/site";
+
 export default function AdminTopbar({ label }: { label: string }) {
   return (
     <div className="h-16 bg-white border-b border-line flex items-center justify-between px-6 gap-4">
@@ -5,8 +7,8 @@ export default function AdminTopbar({ label }: { label: string }) {
         📍 {label}
       </span>
       <div className="flex items-center gap-4 text-sm text-ink/70 whitespace-nowrap">
-        <a href="tel:+919986780221" className="hover:text-ink">
-          📞 Priority: +91 99867 80221
+        <a href={SITE.telHref} className="hover:text-ink">
+          📞 Priority: {SITE.phoneDisplay}
         </a>
         <span className="w-8 h-8 rounded-full bg-ink text-cream flex items-center justify-center text-xs">
           👤

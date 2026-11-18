@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ApiError, Booking, lookupBooking } from "@/lib/api";
+import { ApiError, Booking, bookingLookup, lookupBooking } from "@/lib/api";
 import { getLastBooking } from "@/lib/bookingSession";
 import LiveMap from "./LiveMap";
 import {
@@ -12,8 +12,8 @@ import {
   formatMoney,
   formatTime,
   shortReference,
-  whatsappLink,
 } from "@/lib/format";
+import { SITE, whatsappLink } from "@/lib/site";
 
 const STAGES = [
   { key: "received", label: "Request received", hint: "Your booking is in our queue." },
@@ -38,6 +38,9 @@ export default function LiveTracking() {
 
   const [booking, setBooking] = useState<Booking | null>(null);
   const [checking, setChecking] = useState(true);
+  const [reference, setReference] = useState(
+    bookingId ? shortReference(bookingId) : ""
+  );
   const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -65,7 +68,7 @@ export default function LiveTracking() {
 
     const timer = window.setInterval(async () => {
       try {
-        setBooking(await lookupBooking(booking.id, phone));
+        setBooking(await lookupBooking(bookingLookup(booking.id, "", phone)));
       } catch {
         // A transient network error must not wipe the screen; the next tick retries.
       }
@@ -97,7 +100,7 @@ export default function LiveTracking() {
     setError(null);
     setLoading(true);
     try {
-      setBooking(await lookupBooking(bookingId, phone));
+      setBooking(await lookupBooking(bookingLookup(bookingId, reference, phone)));
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
         setError("No booking matches that reference and phone number.");
@@ -126,8 +129,8 @@ export default function LiveTracking() {
           <p className="eyebrow">Track Reservation</p>
           <h1 className="text-2xl font-bold text-ink mt-2">Find your booking</h1>
           <p className="text-sm text-muted mt-2 leading-relaxed">
-            Enter the same phone number you used when booking to protect your
-            reservation details.
+            Enter the reference from your confirmation (it starts with RT-) and
+            the phone number you booked with. Both must match.
           </p>
           <form onSubmit={handleLookup} className="mt-6 space-y-4">
             <label className="block">
@@ -135,10 +138,13 @@ export default function LiveTracking() {
                 Booking reference
               </span>
               <input
-                value={bookingId ? shortReference(bookingId) : ""}
-                readOnly
-                className="w-full rounded-md border border-line bg-sage/40 px-3 py-2.5 text-sm font-mono text-ink"
-                placeholder="Open this page from your confirmation link"
+                value={reference}
+                onChange={(event) => setReference(event.target.value)}
+                required
+                className="w-full rounded-md border border-line bg-cream px-3 py-2.5 text-sm font-mono text-ink uppercase placeholder:normal-case"
+                placeholder="RT-1A2B3C4D"
+                autoCapitalize="characters"
+                autoComplete="off"
               />
             </label>
             <label className="block">
@@ -161,7 +167,7 @@ export default function LiveTracking() {
             )}
             <button
               type="submit"
-              disabled={loading || !bookingId}
+              disabled={loading || !reference.trim() || !phone.trim()}
               className="btn-primary w-full disabled:opacity-60"
             >
               {loading ? "Checking…" : "View status"}
@@ -179,7 +185,7 @@ export default function LiveTracking() {
     );
   }
 
-  const reference = shortReference(booking.id);
+  const bookingReference = shortReference(booking.id);
   const current = stageIndex(booking);
   const cancelled = booking.status === "cancelled";
   const hasLocation = booking.driverLat != null && booking.driverLng != null;
@@ -200,7 +206,7 @@ export default function LiveTracking() {
           </p>
           <h1 className="text-2xl font-bold text-ink mt-1">Booking status</h1>
           <p className="text-sm text-muted mt-1">
-            Reference {reference}
+            Reference {bookingReference}
           </p>
         </div>
         <Link href={`/confirmation?id=${booking.id}`} className="btn-secondary text-xs py-2.5">
@@ -259,7 +265,7 @@ export default function LiveTracking() {
             {cancelled ? (
               <p className="text-sm text-ink/70 leading-relaxed">
                 This booking was cancelled. If this is unexpected, call our
-                concierge at <b>+91 99867 80221</b>.
+                concierge at <b>{SITE.phoneDisplay}</b>.
               </p>
             ) : (
               <ol className="space-y-3">
@@ -362,7 +368,7 @@ export default function LiveTracking() {
             </p>
             <a
               href={whatsappLink(
-                `Hello Royal Travels, I need an update on booking ${reference}.`
+                `Hello Royal Travels, I need an update on booking ${bookingReference}.`
               )}
               target="_blank"
               rel="noopener noreferrer"
@@ -370,8 +376,8 @@ export default function LiveTracking() {
             >
               💬 WhatsApp dispatch
             </a>
-            <a href="tel:+919986780221" className="btn-secondary w-full text-xs py-2.5">
-              📞 Call +91 99867 80221
+            <a href={SITE.telHref} className="btn-secondary w-full text-xs py-2.5">
+              📞 Call {SITE.phoneDisplay}
             </a>
           </div>
         </div>

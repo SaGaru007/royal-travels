@@ -31,7 +31,7 @@ public class DriverTripController {
     @PostMapping("/lookup")
     @Operation(summary = "Open a trip sheet as the assigned driver")
     public DriverTripResponse lookup(@Valid @RequestBody DriverTripRequest req) {
-        return service.tripForDriver(req.id(), req.phone());
+        return service.tripForDriver(req);
     }
 
     @PatchMapping("/{id}/stage")

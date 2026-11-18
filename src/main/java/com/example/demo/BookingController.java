@@ -38,7 +38,7 @@ public class BookingController {
      */
     @PostMapping("/lookup")
     public BookingResponse lookup(@Valid @RequestBody LookupRequest req) {
-        return service.lookup(req.id(), req.phone());
+        return service.lookup(req);
     }
 
     @GetMapping

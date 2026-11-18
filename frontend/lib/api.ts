@@ -1,3 +1,5 @@
+import { shortReference } from "@/lib/format";
+
 export type ServiceType = "outstation" | "local" | "airport" | "callback";
 export type BookingStatus = "new" | "contacted" | "confirmed" | "completed" | "cancelled";
 export type PaymentStatus = "pending" | "paid";
@@ -170,6 +172,20 @@ export const API_BASE_URL = (
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8081"
 ).replace(/\/$/, "");
 
+// A production bundle pointed at localhost means the env var was missing at
+// build time. Say so loudly in the console instead of failing silently.
+if (
+  process.env.NODE_ENV === "production" &&
+  /(^|\/\/)(localhost|127\.0\.0\.1)/.test(API_BASE_URL)
+) {
+  // eslint-disable-next-line no-console
+  console.error(
+    "[api] NEXT_PUBLIC_API_BASE_URL is not set; requests are going to " +
+      API_BASE_URL +
+      ". Set it to the deployed API origin and rebuild."
+  );
+}
+
 const REQUEST_TIMEOUT_MS = 25_000;
 
 /**
@@ -328,10 +344,39 @@ export function createBooking(payload: BookingCreate) {
   });
 }
 
-export function lookupBooking(id: string, phone: string) {
+/**
+ * The confirmation, tracking and driver pages all resolve the same way: either
+ * the booking UUID from a link, or the short RT-XXXXXXXX reference the customer
+ * can read off their confirmation. Both still need the phone number.
+ */
+export interface BookingReferenceLookup {
+  id?: string;
+  reference?: string;
+  phone: string;
+}
+
+/**
+ * Builds the payload from whatever the page has. A link gives us the UUID; a
+ * customer reading their confirmation has only RT-XXXXXXXX. When the reference
+ * box still holds the UUID's short form we send the id, otherwise we send what
+ * the customer typed.
+ */
+export function bookingLookup(
+  bookingId: string,
+  reference: string,
+  phone: string
+): BookingReferenceLookup {
+  const trimmed = reference.trim();
+  const matchesId =
+    Boolean(bookingId) &&
+    (!trimmed || trimmed.toUpperCase() === shortReference(bookingId));
+  return matchesId ? { id: bookingId, phone } : { phone, reference: trimmed };
+}
+
+export function lookupBooking(lookup: BookingReferenceLookup) {
   return request<Booking>("/api/bookings/lookup", {
     method: "POST",
-    body: JSON.stringify({ id, phone }),
+    body: JSON.stringify(lookup),
   });
 }
 
@@ -349,6 +394,20 @@ export function getBookings(
   search.set("page", String(params.page ?? 0));
   search.set("size", String(params.size ?? 100));
   return request<Page<Booking>>(`/api/bookings?${search.toString()}`, {}, token);
+}
+
+/**
+ * Walks every page of the booking list. Analytics used to read only the first
+ * page, which meant totals quietly stopped growing after 500 bookings.
+ */
+export async function getAllBookings(token: string, pageSize = 200) {
+  const first = await getBookings(token, { page: 0, size: pageSize });
+  const all = [...first.content];
+  for (let page = 1; page < first.totalPages; page += 1) {
+    const next = await getBookings(token, { page, size: pageSize });
+    all.push(...next.content);
+  }
+  return all;
 }
 
 export function updateBooking(token: string, id: string, payload: BookingUpdate) {
@@ -403,10 +462,10 @@ export function deleteDriver(token: string, id: string) {
 }
 
 /** Driver trip sheet: booking reference + the assigned driver's phone. */
-export function getDriverTrip(id: string, phone: string) {
+export function getDriverTrip(lookup: BookingReferenceLookup) {
   return request<DriverTripResponse>("/api/driver/trips/lookup", {
     method: "POST",
-    body: JSON.stringify({ id, phone }),
+    body: JSON.stringify(lookup),
   });
 }
 

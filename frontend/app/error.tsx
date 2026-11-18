@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import { SITE } from "@/lib/site";
 
 export default function GlobalError({
   error,
@@ -39,8 +40,8 @@ export default function GlobalError({
         </div>
         <p className="text-xs text-muted mt-6">
           Still stuck? Call our concierge on{" "}
-          <a href="tel:+919986780221" className="text-ink underline underline-offset-2">
-            +91 99867 80221
+          <a href={SITE.telHref} className="text-ink underline underline-offset-2">
+            {SITE.phoneDisplay}
           </a>
           .
         </p>

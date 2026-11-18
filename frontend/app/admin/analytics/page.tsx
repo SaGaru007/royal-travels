@@ -20,7 +20,7 @@ import {
   Booking,
   Vehicle,
   getAdminVehicles,
-  getBookings,
+  getAllBookings,
 } from "@/lib/api";
 import { clearAdminSession, getAdminToken } from "@/lib/auth";
 import { formatMoney } from "@/lib/format";
@@ -55,11 +55,11 @@ export default function AnalyticsPage() {
     setLoading(true);
     setError(null);
     try {
-      const [page, fleet] = await Promise.all([
-        getBookings(token, { size: 500 }),
+      const [all, fleet] = await Promise.all([
+        getAllBookings(token),
         getAdminVehicles(token),
       ]);
-      setBookings(page.content);
+      setBookings(all);
       setVehicles(fleet);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {

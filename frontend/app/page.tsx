@@ -6,8 +6,14 @@ import Offerings from "@/components/Offerings";
 import Fleet from "@/components/Fleet";
 import CTABanner from "@/components/CTABanner";
 import Footer from "@/components/Footer";
+import { getInitialVehicles } from "@/lib/vehicles";
 
-export default function Home() {
+// Keeps the homepage fleet section in step with the catalogue cache.
+export const revalidate = 60;
+
+export default async function Home() {
+  const vehicles = await getInitialVehicles();
+
   return (
     <main>
       <Header />
@@ -15,7 +21,7 @@ export default function Home() {
       <BookingBar />
       <Features />
       <Offerings />
-      <Fleet />
+      <Fleet vehicles={vehicles ?? []} />
       <CTABanner />
       <Footer />
     </main>

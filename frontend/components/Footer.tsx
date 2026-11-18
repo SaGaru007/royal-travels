@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SITE } from "@/lib/site";
 
 const linkCols = [
   {
@@ -35,12 +36,11 @@ export default function Footer() {
             <span className="font-serif text-lg text-ink">Royal Travels</span>
           </Link>
           <p className="text-sm text-muted leading-relaxed mb-4">
-            Redefining luxury chauffeur-driven travel across India with a
-            premium fleet, pristine sanitized interiors, and courteous
-            drivers.
+            Chauffeur-driven cars for local city rentals, outstation journeys
+            and airport transfers. Book online or call dispatch directly.
           </p>
           <p className="text-xs text-emerald-700">
-            ✓ Govt. approved tourist transporter
+            ✓ Direct dispatch line for bookings and changes
           </p>
         </div>
 
@@ -67,17 +67,17 @@ export default function Footer() {
           </h4>
           <ul className="space-y-2.5 text-sm text-muted">
             <li>
-              <a href="tel:+919986780221" className="hover:text-ink">
-                +91 99867 80221
+              <a href={SITE.telHref} className="hover:text-ink">
+                {SITE.phoneDisplay}
               </a>
             </li>
             <li>
-              <a href="mailto:bookings@royaltravels.in" className="hover:text-ink">
-                bookings@royaltravels.in
+              <a href={SITE.emailHref} className="hover:text-ink">
+                {SITE.email}
               </a>
             </li>
-            <li>MG Road, Bengaluru, Karnataka</li>
-            <li className="text-emerald-700">24 Hours / 7 Days Operational</li>
+            {SITE.address && <li>{SITE.address}</li>}
+            {SITE.hours && <li className="text-emerald-700">{SITE.hours}</li>}
           </ul>
         </div>
       </div>

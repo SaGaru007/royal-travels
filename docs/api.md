@@ -406,6 +406,18 @@ The `409` detail includes the first 8 characters of the original reference:
 
 `POST /api/bookings/lookup` — public, rate limited to 60 per 10 minutes.
 
+Send **either** the booking UUID (from a confirmation/tracking link) **or** the
+short reference the customer reads on the confirmation (`RT-1A2B3C4D`, also
+accepted lowercase or without the prefix). The phone number is required either
+way.
+
+```json
+{
+  "reference": "RT-3D6F0C1E",
+  "phone": "+919876543210"
+}
+```
+
 ```json
 {
   "id": "3d6f0c1e-9a2b-4c7d-8e1f-2a3b4c5d6e7f",
@@ -414,12 +426,14 @@ The `409` detail includes the first 8 characters of the original reference:
 ```
 
 Returns the full booking on a match. Returns `404` with `"Booking not found"` for
-both a missing booking and a wrong phone — the response does not reveal which.
+both an unknown reference and a wrong phone — the response does not reveal which.
+Reference matching compares at least the first six hex characters and only
+returns a booking whose phone matches, so a guessed reference reveals nothing.
 
 | Status | When |
 |---|---|
-| 200 | UUID exists and phone matches |
-| 400 | Missing/invalid UUID or blank phone |
+| 200 | Reference resolves and phone matches |
+| 400 | Missing/invalid reference (too short or too long) or blank phone |
 | 404 | Booking not found or phone mismatch |
 | 429 | More than 60 lookups per 10 minutes |
 
@@ -624,9 +638,12 @@ the customer lookup.
 
 `POST /api/driver/trips/lookup`
 
+Accepts the booking UUID from the trip-sheet link, or the short `RT-1A2B3C4D`
+reference, plus the phone number of the assigned driver.
+
 ```json
 {
-  "id": "3d6f0c1e-9a2b-4c7d-8e1f-2a3b4c5d6e7f",
+  "reference": "RT-3D6F0C1E",
   "phone": "+919812345678"
 }
 ```
@@ -643,7 +660,7 @@ the customer lookup.
 | Status | When |
 |---|---|
 | 200 | Booking exists, a driver is assigned, and the phone matches |
-| 400 | Missing/invalid UUID or blank phone |
+| 400 | Missing/invalid reference (too short or too long) or blank phone |
 | 404 | No booking, no assigned driver, or wrong phone (same message) |
 | 429 | More than 60 lookups per 10 minutes |
 

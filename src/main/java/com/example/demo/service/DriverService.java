@@ -9,6 +9,7 @@ import com.example.demo.dto.DriverRequest;
 import com.example.demo.dto.DriverResponse;
 import com.example.demo.dto.DriverStageRequest;
 import com.example.demo.dto.DriverTripResponse;
+import com.example.demo.dto.DriverTripRequest;
 import com.example.demo.dto.DriverLocationRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -30,8 +31,6 @@ import java.util.UUID;
  */
 @Service
 public class DriverService {
-
-    private static final int PHONE_MATCH_DIGITS = 10;
 
     private final DriverRepository repo;
     private final BookingRepository bookings;
@@ -95,10 +94,26 @@ public class DriverService {
      * phone number belongs to the driver assigned to that booking.
      */
     @Transactional(readOnly = true)
-    public DriverTripResponse tripForDriver(UUID bookingId, String phone) {
-        Booking booking = findBooking(bookingId);
-        Driver driver = assignedDriver(booking, phone);
+    public DriverTripResponse tripForDriver(DriverTripRequest req) {
+        Booking booking = resolveForDriver(req.id(), req.reference(), req.phone());
+        Driver driver = assignedDriver(booking, req.phone());
         return DriverTripResponse.from(booking, driver);
+    }
+
+    private Booking resolveForDriver(UUID id, String reference, String phone) {
+        if (id != null) {
+            return findBooking(id);
+        }
+        for (Booking candidate : bookings.findByReferencePrefix(BookingReference.prefix(reference))) {
+            if (candidate.getDriverId() != null) {
+                Driver driver = repo.findById(candidate.getDriverId()).orElse(null);
+                if (driver != null && BookingReference.phoneMatches(driver.getPhone(), phone)) {
+                    return candidate;
+                }
+            }
+        }
+        // Same response for a wrong phone and an unknown reference.
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Trip not found");
     }
 
     /**
@@ -170,10 +185,7 @@ public class DriverService {
                     "No driver is assigned to this booking yet");
         }
         Driver driver = find(booking.getDriverId());
-        String stored = digits(driver.getPhone());
-        String supplied = digits(phone);
-        if (supplied.length() < PHONE_MATCH_DIGITS
-                || (!stored.endsWith(supplied) && !supplied.endsWith(stored))) {
+        if (!BookingReference.phoneMatches(driver.getPhone(), phone)) {
             // Same response for a wrong phone and an unknown trip.
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Trip not found");
         }
@@ -204,9 +216,5 @@ public class DriverService {
         driver.setLicenseVerified(req.licenseVerified() != null && req.licenseVerified());
         driver.setStatus(req.status() == null ? "available" : req.status());
         driver.setVehicleId(req.vehicleId());
-    }
-
-    private static String digits(String value) {
-        return value == null ? "" : value.replaceAll("\\D", "");
     }
 }

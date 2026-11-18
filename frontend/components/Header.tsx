@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { SITE } from "@/lib/site";
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -50,14 +51,14 @@ export default function Header() {
 
         <div className="hidden md:flex items-center gap-3 shrink-0">
           <a
-            href="tel:+919986780221"
+            href={SITE.telHref}
             className="text-sm leading-tight border border-line rounded-md px-3 py-2"
           >
             <span className="flex items-center gap-1 text-[11px] text-emerald-700">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
               24/7 Available
             </span>
-            <span className="font-semibold text-ink">+91 99867 80221</span>
+            <span className="font-semibold text-ink">{SITE.phoneDisplay}</span>
           </a>
           <Link
             href="/#booking"
@@ -97,11 +98,11 @@ export default function Header() {
           </nav>
           <div className="max-w-content mx-auto container-px pb-4 flex flex-col gap-2">
             <a
-              href="tel:+919986780221"
+              href={SITE.telHref}
               className="border border-line rounded-md px-3 py-2.5 text-sm bg-white"
             >
               <span className="block text-[10px] text-emerald-700">24/7 dispatch</span>
-              <span className="font-semibold text-ink">+91 99867 80221</span>
+              <span className="font-semibold text-ink">{SITE.phoneDisplay}</span>
             </a>
             <Link
               href="/#booking"

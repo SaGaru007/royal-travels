@@ -7,11 +7,13 @@ import {
   ApiError,
   Booking,
   DriverTripResponse,
+  bookingLookup,
   getDriverTrip,
   postDriverLocation,
   updateDriverStage,
 } from "@/lib/api";
 import { formatDate, formatTime, shortReference } from "@/lib/format";
+import { SITE } from "@/lib/site";
 
 const STAGE_LABEL: Record<string, string> = {
   assigned: "Assigned",
@@ -32,6 +34,9 @@ export default function DriverTripSheet() {
   const bookingId = params.get("id") ?? "";
 
   const [phone, setPhone] = useState("");
+  const [reference, setReference] = useState(
+    bookingId ? shortReference(bookingId) : ""
+  );
   const [trip, setTrip] = useState<DriverTripResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -49,7 +54,7 @@ export default function DriverTripSheet() {
     setError(null);
     setLoading(true);
     try {
-      setTrip(await getDriverTrip(bookingId, phone));
+      setTrip(await getDriverTrip(bookingLookup(bookingId, reference, phone)));
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
         setError(
@@ -195,8 +200,8 @@ export default function DriverTripSheet() {
           <p className="eyebrow">Driver Trip Sheet</p>
           <h1 className="text-2xl font-bold text-ink mt-2">Open your trip</h1>
           <p className="text-sm text-muted mt-2 leading-relaxed">
-            Enter the booking reference from the WhatsApp message and the phone
-            number dispatch has on file for you.
+            Enter the booking reference from the WhatsApp message (it starts
+            with RT-) and the phone number dispatch has on file for you.
           </p>
           <form onSubmit={handleLookup} className="mt-6 space-y-4">
             <label className="block">
@@ -204,10 +209,13 @@ export default function DriverTripSheet() {
                 Booking reference
               </span>
               <input
-                value={bookingId ? shortReference(bookingId) : ""}
-                readOnly
-                className="w-full rounded-md border border-line bg-sage/40 px-3 py-2.5 text-sm font-mono text-ink"
-                placeholder="Open the link dispatch sent you"
+                value={reference}
+                onChange={(event) => setReference(event.target.value)}
+                required
+                className="w-full rounded-md border border-line bg-cream px-3 py-2.5 text-sm font-mono text-ink uppercase placeholder:normal-case"
+                placeholder="RT-1A2B3C4D"
+                autoCapitalize="characters"
+                autoComplete="off"
               />
             </label>
             <label className="block">
@@ -224,12 +232,6 @@ export default function DriverTripSheet() {
                 className="w-full rounded-md border border-line bg-cream px-3 py-2.5 text-sm"
               />
             </label>
-            {!bookingId && (
-              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                This page needs the booking link from dispatch. Ask the office to
-                resend it on WhatsApp.
-              </p>
-            )}
             {error && (
               <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
                 {error}
@@ -237,7 +239,7 @@ export default function DriverTripSheet() {
             )}
             <button
               type="submit"
-              disabled={loading || !bookingId}
+              disabled={loading || !reference.trim() || !phone.trim()}
               className="btn-primary w-full disabled:opacity-60"
             >
               {loading ? "Opening trip…" : "Open trip sheet"}
@@ -245,8 +247,8 @@ export default function DriverTripSheet() {
           </form>
           <p className="text-xs text-muted mt-5 text-center">
             Need help? Call dispatch on{" "}
-            <a href="tel:+919986780221" className="text-ink underline underline-offset-2">
-              +91 99867 80221
+            <a href={SITE.telHref} className="text-ink underline underline-offset-2">
+              {SITE.phoneDisplay}
             </a>
             .
           </p>
@@ -466,8 +468,8 @@ export default function DriverTripSheet() {
       <p className="text-xs text-muted text-center leading-relaxed">
         Location sharing works only while this trip sheet stays open. For
         changes, call the office on{" "}
-        <a href="tel:+919986780221" className="text-ink underline underline-offset-2">
-          +91 99867 80221
+        <a href={SITE.telHref} className="text-ink underline underline-offset-2">
+          {SITE.phoneDisplay}
         </a>
         .
       </p>

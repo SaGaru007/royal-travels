@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { SITE } from "@/lib/site";
 
 // Hero background image — used as the video's poster frame, and as the
 // fallback for browsers with data-saver mode or prefers-reduced-motion on.
@@ -67,9 +68,9 @@ export default function Hero() {
         </h1>
 
         <p className="mt-6 max-w-lg text-[15px] leading-relaxed text-ink/70">
-          Premium chauffeur-driven fleet for local city rentals, outstation
-          journeys across India, and airport transfers. Experience immaculate
-          luxury, verified master chauffeurs, and effortless punctuality.
+          Chauffeur-driven sedans, MPVs and vans for local city rentals,
+          outstation journeys and airport transfers. Request a car here and our
+          concierge confirms the vehicle and fare with you.
         </p>
 
         <div className="mt-8 flex flex-wrap items-center gap-4">
@@ -79,11 +80,11 @@ export default function Hero() {
               <div className="text-muted text-xs">
                 Speak directly to our travel concierge
               </div>
-              <div className="font-semibold text-ink">+91 99867 80221</div>
+              <div className="font-semibold text-ink">{SITE.phoneDisplay}</div>
             </div>
           </div>
           <span className="text-xs text-muted hidden sm:block">
-            Instant confirmations in 15 minutes
+            No online payment required
           </span>
         </div>
 

@@ -129,6 +129,11 @@ npm run dev
 
 ```text
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8081
+# Optional overrides; the defaults live in lib/site.ts
+NEXT_PUBLIC_CONTACT_PHONE=+919986780221
+NEXT_PUBLIC_CONTACT_EMAIL=bookings@royaltravels.in
+NEXT_PUBLIC_BUSINESS_ADDRESS=
+NEXT_PUBLIC_BUSINESS_HOURS=
 ```
 
 | Script | Purpose |

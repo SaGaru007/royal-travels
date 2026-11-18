@@ -46,7 +46,3 @@ export function formatTime(value?: string | null) {
 export function shortReference(id: string) {
   return `RT-${id.replace(/-/g, "").slice(0, 8).toUpperCase()}`;
 }
-
-export function whatsappLink(message: string) {
-  return `https://wa.me/919986780221?text=${encodeURIComponent(message)}`;
-}

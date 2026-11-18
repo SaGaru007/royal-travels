@@ -1,6 +1,7 @@
 import Link from "next/link";
-import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import Header from "@/components/Header";
+import { SITE } from "@/lib/site";
 
 export default function DriverLoginPage() {
   return (
@@ -25,8 +26,8 @@ export default function DriverLoginPage() {
           </Link>
           <p className="text-xs text-muted mt-6">
             Need the link? Call dispatch on{" "}
-            <a href="tel:+919986780221" className="text-ink underline underline-offset-2">
-              +91 99867 80221
+            <a href={SITE.telHref} className="text-ink underline underline-offset-2">
+              {SITE.phoneDisplay}
             </a>
             .
           </p>

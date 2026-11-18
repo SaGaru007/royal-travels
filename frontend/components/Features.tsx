@@ -1,33 +1,33 @@
 const features = [
   {
     icon: "🛡",
-    title: "All-India Tourist Permit",
-    body: "Authorized inter-state travel permits across every state with zero border check delays or passenger hassles.",
+    title: "Chauffeur-driven only",
+    body: "Every booking includes a driver. Self-drive is not offered, so you can work, rest or take a call on the way.",
   },
   {
-    icon: "❄",
-    title: "AC & Non-AC Climate Choice",
-    body: "Flexible climate control with whisper-quiet chilled AC or open-breeze non-AC tailored to your preference and weather.",
+    icon: "🚙",
+    title: "The right size for the trip",
+    body: "Sedan for city runs, MPV or SUV for families, van for groups. Dispatch confirms availability for your dates.",
   },
   {
     icon: "🎧",
-    title: "Hi-Fi Sound & Infotainment",
-    body: "High-definition audio with seamless Bluetooth, Aux, and smartphone connectivity for an immersive, relaxed journey.",
+    title: "Air-conditioned cabins",
+    body: "Cars run with AC by default. If you need something specific on board, tell the concierge and we will confirm it before the trip.",
   },
   {
-    icon: "✨",
-    title: "Pristine Sanitized Interiors",
-    body: "Deep-cleaned, odor-free, non-smoking executive cabins with fresh upholstery and complimentary mineral water.",
+    icon: "📍",
+    title: "Live trip tracking",
+    body: "While a trip is running, the driver can share their position from the trip sheet and you can follow it from the tracking page.",
   },
   {
     icon: "🎩",
-    title: "Uniformed Chauffeurs",
-    body: "Vetted, background-verified, route-experienced, courteous drivers trained in defensive and polite driving.",
+    title: "Driver details before pickup",
+    body: "Dispatch assigns a named chauffeur with a phone number you can reach, and shares the details with you ahead of the trip.",
   },
   {
     icon: "📋",
-    title: "Transparent & Flexible",
-    body: "Clear upfront itineraries, flexible stops, zero hidden charges, real-time GPS tracking, and corporate billing.",
+    title: "Clear quote, no online payment",
+    body: "You get the vehicle, rate and inclusions before the trip. Nothing is charged on this site; the fare is settled with dispatch.",
   },
 ];
 
@@ -36,9 +36,9 @@ export default function Features() {
     <section className="bg-sage py-24">
       <div className="max-w-content mx-auto container-px">
         <div className="text-center max-w-xl mx-auto mb-14">
-          <p className="eyebrow">The Royal Travels Standard</p>
+          <p className="eyebrow">How it works</p>
           <h2 className="mt-3 text-3xl md:text-4xl font-bold text-ink">
-            Peace of mind on every kilometer
+            Straight answers before you book
           </h2>
         </div>
 
