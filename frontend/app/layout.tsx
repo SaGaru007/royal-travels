@@ -1,18 +1,31 @@
 import type { Metadata } from "next";
-import { Inter, Fraunces } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const sans = Inter({
-  subsets: ["latin"],
+// Self-hosted (SIL Open Font License) so a build never depends on downloading
+// from Google Fonts: that fetch is flaky and twice failed the CI build.
+const sans = localFont({
+  src: "./fonts/inter-latin.woff2",
   variable: "--font-sans",
-  weight: ["400", "500", "600", "700", "800"],
+  weight: "100 900",
+  display: "swap",
 });
 
-const serif = Fraunces({
-  subsets: ["latin"],
+const serif = localFont({
+  src: [
+    {
+      path: "./fonts/fraunces-latin.woff2",
+      weight: "100 900",
+      style: "normal",
+    },
+    {
+      path: "./fonts/fraunces-italic-latin.woff2",
+      weight: "100 900",
+      style: "italic",
+    },
+  ],
   variable: "--font-serif",
-  weight: ["500", "600"],
-  style: ["normal", "italic"],
+  display: "swap",
 });
 
 const API_ORIGIN = (
